@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { quizData } from './questions.js';
-const QUESTIONS = quizData || [];
+export const QUESTIONS = [
+import { QUESTIONS } from './questions.js';
 
 const DOMAIN_COLORS = {
   "生成AIの基礎": "#4fc3f7",
