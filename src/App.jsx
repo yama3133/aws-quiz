@@ -1,4 +1,4 @@
-export const QUESTIONS = [
+import const QUESTIONS = [
 import { QUESTIONS } from './questions.js';
 
 const DOMAIN_COLORS = {
