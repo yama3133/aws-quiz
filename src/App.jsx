@@ -1,4 +1,4 @@
-import { QUESTIONS } from './questions.js';
+import { quizData as QUESTIONS } from './questions.js';
 import { useState, useEffect, useRef } from "react";
 
 const PARTY = [
