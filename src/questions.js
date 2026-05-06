@@ -1,4 +1,4 @@
-export const QUESTIONS = [
+export const quizData = [
   // ===== ドメイン1: 生成AIの基礎 (1-25) =====
   {
     id: 1, domain: "生成AIの基礎",
