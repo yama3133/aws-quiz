@@ -1,795 +1,581 @@
-import { quizData as QUESTIONS } from './questions.js';
 import { useState, useEffect, useRef } from "react";
+import { quizData as QUESTIONS } from './questions.js';
 
-const PARTY = [
-  { name: "クラウド", job: "Warrior", hp: 120, maxHp: 120, mp: 80, maxMp: 80, emoji: "⚔️" },
-  { name: "ライトニング", job: "Soldier", hp: 100, maxHp: 100, mp: 100, maxMp: 100, emoji: "⚡" },
-  { name: "テラ", job: "Mage", hp: 80, maxHp: 80, mp: 140, maxMp: 140, emoji: "🔮" },
-];
-
-const ENEMIES = [
-  { name: "ガードスコーピオン", emoji: "🦂", color: "#10b981" },
-  { name: "クアール", emoji: "🐱", color: "#8b5cf6" },
-  { name: "マリリス", emoji: "🐍", color: "#ef4444" },
-  { name: "クリスタリス", emoji: "💎", color: "#06b6d4" },
-  { name: "オメガ", emoji: "🤖", color: "#f59e0b" },
-];
-
-const COMMANDS = ["たたかう", "まほう", "アイテム", "にげる"];
 const DOMAIN_COLORS = {
-  "生成AIの基礎": "#06b6d4",
-  "データ準備": "#10b981",
-  "アプリ開発": "#f59e0b",
-  "評価と最適化": "#ec4899",
-  "セキュリティ": "#8b5cf6",
+  "生成AIの基礎": "#4fc3f7",
+  "データ準備": "#81c784",
+  "アプリ開発": "#ffb74d",
+  "評価と最適化": "#f06292",
+  "セキュリティ": "#ce93d8",
 };
 
+const MONSTER_BY_DOMAIN = {
+  "生成AIの基礎": { emoji: "🟦", name: "プロンプトスライム" },
+  "データ準備": { emoji: "🪨", name: "チャンキングゴーレム" },
+  "アプリ開発": { emoji: "🐉", name: "アクショングループドラゴン" },
+  "評価と最適化": { emoji: "🦅", name: "ROUGEワイバーン" },
+  "セキュリティ": { emoji: "🛡️", name: "ガードレールナイト" },
+};
+
+const PLAYER_MAX_HP = 60;
+const PLAYER_MAX_MP = 20;
 const delay = ms => new Promise(r => setTimeout(r, ms));
 
-function ATBBar({ value, max, color, active }) {
-  const pct = Math.min(1, value / max);
-  return (
-    <div style={{ width: "100%", height: 6, background: "rgba(0,0,0,0.5)", borderRadius: 3, border: "1px solid rgba(255,255,255,0.08)", overflow: "hidden" }}>
-      <div style={{
-        height: "100%", width: `${pct * 100}%`,
-        background: active ? `linear-gradient(90deg, ${color}, white)` : color,
-        borderRadius: 3,
-        boxShadow: active ? `0 0 8px ${color}` : "none",
-        transition: "width 0.1s linear",
-      }} />
-    </div>
-  );
-}
-
-function HPBar({ hp, maxHp }) {
-  const pct = hp / maxHp;
-  const color = pct > 0.5 ? "#4ade80" : pct > 0.25 ? "#facc15" : "#f87171";
-  return (
-    <div style={{ width: "100%", height: 5, background: "rgba(0,0,0,0.5)", borderRadius: 2, overflow: "hidden" }}>
-      <div style={{ height: "100%", width: `${pct * 100}%`, background: color, transition: "width 0.4s ease", borderRadius: 2 }} />
-    </div>
-  );
-}
-
-function ParticleEffect({ show, color }) {
-  if (!show) return null;
-  return (
-    <div style={{ position: "absolute", inset: 0, pointerEvents: "none", overflow: "hidden" }}>
-      {[...Array(12)].map((_, i) => (
-        <div key={i} style={{
-          position: "absolute",
-          width: 4, height: 4,
-          borderRadius: "50%",
-          background: color,
-          left: `${20 + Math.random() * 60}%`,
-          top: `${20 + Math.random() * 60}%`,
-          animation: `particle${i % 3} 0.8s ease-out forwards`,
-          boxShadow: `0 0 6px ${color}`,
-        }} />
-      ))}
-    </div>
-  );
-}
-
-export default function FFQuiz() {
-  const [qIndex, setQIndex] = useState(0);
-  const [phase, setPhase] = useState("idle"); // idle, command, question, animating, result, gameover, clear
-  const [party, setParty] = useState(PARTY.map(p => ({ ...p })));
-  const [activeChar, setActiveChar] = useState(0);
-  const [atbValues, setAtbValues] = useState([0, 40, 70]);
-  const [selectedCmd, setSelectedCmd] = useState(null);
-  const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [enemyHp, setEnemyHp] = useState(100);
-  const [enemyShake, setEnemyShake] = useState(false);
-  const [enemyFlash, setEnemyFlash] = useState(false);
-  const [charAttack, setCharAttack] = useState(null);
-  const [showDamage, setShowDamage] = useState(null);
-  const [showParticle, setShowParticle] = useState(false);
-  const [totalCorrect, setTotalCorrect] = useState(0);
-  const [bgShift, setBgShift] = useState(0);
-  const atbRef = useRef(null);
-  const phaseRef = useRef(phase);
-  phaseRef.current = phase;
-
-  const q = QUESTIONS[Math.min(qIndex, QUESTIONS.length - 1)];
-  const enemy = ENEMIES[Math.min(Math.floor(qIndex / 3), ENEMIES.length - 1)];
-  const accentColor = DOMAIN_COLORS[q?.domain] || "#06b6d4";
-
-  // ATB gauge animation
+function TypewriterText({ text, speed = 35 }) {
+  const [displayed, setDisplayed] = useState("");
   useEffect(() => {
-    atbRef.current = setInterval(() => {
-      if (phaseRef.current !== "command" && phaseRef.current !== "idle") return;
-      setAtbValues(prev => prev.map((v, i) => Math.min(100, v + [1.2, 0.9, 1.5][i])));
-    }, 60);
-    return () => clearInterval(atbRef.current);
-  }, []);
-
-  // Background subtle shift
-  useEffect(() => {
-    const iv = setInterval(() => setBgShift(v => (v + 0.3) % 360), 50);
+    setDisplayed("");
+    let i = 0;
+    const iv = setInterval(() => {
+      if (i < text.length) setDisplayed(text.slice(0, ++i));
+      else clearInterval(iv);
+    }, speed);
     return () => clearInterval(iv);
-  }, []);
+  }, [text]);
+  return <span>{displayed}</span>;
+}
+
+export default function DQQuiz() {
+  const [qIndex, setQIndex] = useState(0);
+  const [phase, setPhase] = useState("battle");
+  const [messages, setMessages] = useState([]);
+  const [playerHp, setPlayerHp] = useState(PLAYER_MAX_HP);
+  const [playerMp, setPlayerMp] = useState(PLAYER_MAX_MP);
+  const [playerLevel, setPlayerLevel] = useState(1);
+  const [playerExp, setPlayerExp] = useState(0);
+  const [monsterHp, setMonsterHp] = useState(100);
+  const [monsterShaking, setMonsterShaking] = useState(false);
+  const [monsterFlashing, setMonsterFlashing] = useState(false);
+  const [monsterDefeated, setMonsterDefeated] = useState(false);
+  const [playerShaking, setPlayerShaking] = useState(false);
+  const [showDamage, setShowDamage] = useState(null);
+  const [selectedIdx, setSelectedIdx] = useState(null);
+  const [answered, setAnswered] = useState(false);
+  const [showExplanation, setShowExplanation] = useState(false);
+  const [totalCorrect, setTotalCorrect] = useState(0);
+  const [totalGold, setTotalGold] = useState(0);
+  const [mode, setMode] = useState("all"); // all or domain
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  const [filteredQuestions, setFilteredQuestions] = useState(QUESTIONS);
+  const [showMenu, setShowMenu] = useState(true);
+
+  const q = filteredQuestions[Math.min(qIndex, filteredQuestions.length - 1)];
+  const monster = q ? (MONSTER_BY_DOMAIN[q.domain] || { emoji: "👾", name: "モンスター" }) : { emoji: "👾", name: "モンスター" };
+  const accentColor = q ? (DOMAIN_COLORS[q.domain] || "#4fc3f7") : "#4fc3f7";
 
   useEffect(() => {
-    startBattle();
-  }, []);
+    if (!showMenu && q) initBattle();
+  }, [showMenu]);
 
-  const startBattle = () => {
-    setEnemyHp(100);
-    setSelectedCmd(null);
-    setSelectedAnswer(null);
+  const initBattle = () => {
+    setMonsterHp(100);
+    setMonsterDefeated(false);
+    setMonsterFlashing(false);
+    setMonsterShaking(false);
+    setSelectedIdx(null);
     setShowDamage(null);
-    setShowParticle(false);
-    setEnemyShake(false);
-    setEnemyFlash(false);
-    setCharAttack(null);
-    const q = QUESTIONS[qIndex] || QUESTIONS[0];
-    setMessages([`${ENEMIES[Math.min(Math.floor(qIndex / 3), ENEMIES.length - 1)].name}が あらわれた！`]);
-    setPhase("command");
+    setShowExplanation(false);
+    setAnswered(false);
+    setMessages([`${monster.name}が　あらわれた！`]);
+    setPhase("question");
   };
 
-  const handleCommand = (cmd) => {
-    if (phase !== "command") return;
-    if (cmd === "たたかう") {
-      setSelectedCmd(cmd);
-      setMessages([`【${q.domain}】\n${q.question}`]);
-      setPhase("question");
-    } else if (cmd === "にげる") {
-      setMessages(["しかし、まわりこまれた！"]);
-    } else {
-      setMessages([`${cmd}は　まだ　つかえない！`]);
-    }
+  const startGame = (domain) => {
+    const questions = domain ? QUESTIONS.filter(q => q.domain === domain) : QUESTIONS;
+    setFilteredQuestions(questions);
+    setSelectedDomain(domain);
+    setQIndex(0);
+    setPlayerHp(PLAYER_MAX_HP);
+    setPlayerMp(PLAYER_MAX_MP);
+    setPlayerLevel(1);
+    setPlayerExp(0);
+    setTotalCorrect(0);
+    setTotalGold(0);
+    setShowMenu(false);
   };
 
   const handleAnswer = async (idx) => {
-    if (phase !== "question") return;
-    setSelectedAnswer(idx);
+    if (answered || phase !== "question") return;
+    setAnswered(true);
+    setSelectedIdx(idx);
     setPhase("animating");
     const correct = idx === q.correct;
 
-    // Character lunges
-    setCharAttack(activeChar);
-    await delay(300);
-
     if (correct) {
-      const dmg = Math.floor(Math.random() * 20) + 25;
-      setEnemyShake(true);
-      setEnemyFlash(true);
+      const dmg = Math.floor(Math.random() * 15) + 20;
+      setMonsterShaking(true);
+      await delay(120);
+      setMonsterShaking(false);
+      setMonsterFlashing(true);
       setShowDamage({ value: dmg, correct: true });
-      setShowParticle(true);
-      const newHp = Math.max(0, enemyHp - dmg);
-      setEnemyHp(newHp);
-      setMessages([`クリティカルヒット！\n${dmg}ダメージ！`]);
+      const newMHp = Math.max(0, monsterHp - dmg);
+      setMonsterHp(newMHp);
+      setMessages([`せいかい！　${monster.name}に　${dmg}の　ダメージ！`]);
       await delay(500);
-      setEnemyShake(false);
-      setEnemyFlash(false);
-      setCharAttack(null);
-      await delay(400);
+      setMonsterFlashing(false);
       setShowDamage(null);
-      setShowParticle(false);
 
+      const newExp = playerExp + 8;
+      const newLv = Math.floor(newExp / 50) + 1;
+      if (newLv > playerLevel) setPlayerLevel(newLv);
+      setPlayerExp(newExp);
       setTotalCorrect(c => c + 1);
-      // gain MP
-      setParty(prev => prev.map((p, i) => i === activeChar ? { ...p, mp: Math.min(p.maxMp, p.mp + q.mp) } : p));
+      setTotalGold(g => g + 3);
 
-      if (newHp <= 0) {
-        setMessages([`${enemy.name}を　たおした！`]);
-        await delay(1200);
-        const next = qIndex + 1;
-        if (next >= QUESTIONS.length) {
-          setPhase("clear");
-        } else {
-          setQIndex(next);
-          setActiveChar((activeChar + 1) % PARTY.length);
-          setAtbValues([0, 0, 0]);
-          setPhase("command");
-          const nextQ = QUESTIONS[next];
-          const nextEnemy = ENEMIES[Math.min(Math.floor(next / 3), ENEMIES.length - 1)];
-          setEnemyHp(100);
-          setMessages([`${nextEnemy.name}が　あらわれた！`]);
-        }
+      if (newMHp <= 0) {
+        setMonsterDefeated(true);
+        await delay(600);
+        setMessages([`${monster.name}を　たおした！`, "8けいけんちを　かくとく！"]);
       } else {
-        setMessages([`せいかい！\nダメージ: ${dmg}`]);
-        await delay(800);
-        setSelectedCmd(null);
-        setSelectedAnswer(null);
-        setActiveChar((activeChar + 1) % PARTY.length);
-        setPhase("command");
-        setMessages([`${enemy.name}を　たおせ！`]);
+        setMessages([`せいかい！　ダメージ: ${dmg}`]);
       }
     } else {
-      // enemy counterattacks
-      const pDmg = Math.floor(Math.random() * 15) + 10;
-      setCharAttack(null);
-      await delay(200);
-      setMessages([`まちがい！\n${enemy.name}の　はんげき！`]);
-      // damage to active char
-      setParty(prev => prev.map((p, i) => {
-        if (i === activeChar) {
-          const newHp = Math.max(0, p.hp - pDmg);
-          return { ...p, hp: newHp };
-        }
-        return p;
-      }));
-      setShowDamage({ value: pDmg, correct: false, onParty: true });
-      await delay(600);
+      const pDmg = Math.floor(Math.random() * 8) + 5;
+      setPlayerShaking(true);
+      setShowDamage({ value: pDmg, correct: false, onPlayer: true });
+      const newHp = Math.max(0, playerHp - pDmg);
+      setPlayerHp(newHp);
+      setMessages([`まちがい！　${monster.name}の　はんげき！`, `${pDmg}の　ダメージを　うけた！`]);
+      await delay(400);
+      setPlayerShaking(false);
       setShowDamage(null);
 
-      const charDead = party[activeChar].hp - pDmg <= 0;
-      if (charDead || party.every((p, i) => i === activeChar ? p.hp - pDmg <= 0 : p.hp <= 0)) {
-        setMessages(["パーティが　ぜんめつした..."]);
+      if (newHp <= 0) {
+        setMessages(["HPが　ゼロに　なった！", "しんでしまった..."]);
         setPhase("gameover");
         return;
       }
+    }
 
-      await delay(400);
-      setSelectedCmd(null);
-      setSelectedAnswer(null);
-      setActiveChar((activeChar + 1) % PARTY.length);
-      setPhase("command");
-      setMessages([`${enemy.name}を　たおせ！`]);
+    await delay(300);
+    setShowExplanation(true);
+    setPhase("result");
+  };
+
+  const handleNext = () => {
+    const next = qIndex + 1;
+    if (next >= filteredQuestions.length) {
+      setPhase("clear");
+    } else {
+      setQIndex(next);
+      setMonsterHp(100);
+      setMonsterDefeated(false);
+      setMonsterFlashing(false);
+      setMonsterShaking(false);
+      setSelectedIdx(null);
+      setShowDamage(null);
+      setShowExplanation(false);
+      setAnswered(false);
+      const nextQ = filteredQuestions[next];
+      const nextMonster = MONSTER_BY_DOMAIN[nextQ.domain] || { emoji: "👾", name: "モンスター" };
+      setMessages([`${nextMonster.name}が　あらわれた！`]);
+      setPhase("question");
     }
   };
 
-  const handleRestart = () => {
-    setQIndex(0);
-    setParty(PARTY.map(p => ({ ...p })));
-    setAtbValues([0, 40, 70]);
-    setTotalCorrect(0);
-    setActiveChar(0);
-    startBattle();
-    setPhase("command");
-    setMessages(["新しい　たたかいが　はじまった！"]);
+  const choiceBg = (i) => {
+    if (!answered) return "linear-gradient(135deg, #0d1f3c, #162440)";
+    if (i === q.correct) return "linear-gradient(135deg, #1b3a1b, #2e5e2e)";
+    if (i === selectedIdx && i !== q.correct) return "linear-gradient(135deg, #3a1b1b, #5e2e2e)";
+    return "linear-gradient(135deg, #0a1628, #0d1e38)";
+  };
+  const choiceBorderColor = (i) => {
+    if (!answered) return "#2a5298";
+    if (i === q.correct) return "#66bb6a";
+    if (i === selectedIdx && i !== q.correct) return "#ef5350";
+    return "#1a2a4a";
+  };
+  const choiceTextColor = (i) => {
+    if (!answered) return "#e2e8f0";
+    if (i === q.correct) return "#a5d6a7";
+    if (i === selectedIdx && i !== q.correct) return "#ef9a9a";
+    return "#37474f";
   };
 
-  const atbReady = atbValues[activeChar] >= 100;
+  // ===== メニュー画面 =====
+  if (showMenu) {
+    return (
+      <>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          @keyframes starPulse { 0%,100%{opacity:0.2} 50%{opacity:0.9} }
+          @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        `}</style>
+        <div style={{
+          minHeight: "100vh",
+          background: "linear-gradient(160deg, #060a18 0%, #0a1020 60%, #0e1428 100%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontFamily: "'DotGothic16', monospace",
+          padding: 16, position: "relative",
+        }}>
+          {[...Array(30)].map((_, i) => (
+            <div key={i} style={{
+              position: "fixed", width: 2, height: 2, background: "#fff", borderRadius: "50%",
+              left: `${(i * 37 + 13) % 100}%`, top: `${(i * 23 + 7) % 80}%`,
+              animation: `starPulse ${1.5 + (i % 3) * 0.7}s infinite`,
+              animationDelay: `${(i * 0.13) % 2}s`, pointerEvents: "none",
+            }} />
+          ))}
 
+          <div style={{ width: "100%", maxWidth: 480, animation: "fadeIn 0.5s ease" }}>
+            <div style={{ textAlign: "center", marginBottom: 28 }}>
+              <div style={{ fontSize: 10, color: "#4a6fa5", letterSpacing: 5, marginBottom: 10 }}>⚔ AWS GDA-C01 ⚔</div>
+              <div style={{ fontSize: 22, color: "#ffd700", textShadow: "0 0 20px #ffd700", marginBottom: 6 }}>
+                もぎしけん　ドラクエ
+              </div>
+              <div style={{ fontSize: 11, color: "#546e7a" }}>全{QUESTIONS.length}問　ドメイン別に挑戦できます</div>
+            </div>
+
+            <div style={{
+              background: "rgba(10,16,32,0.9)", border: "2px solid #2a4a7f",
+              borderRadius: 8, padding: "20px 16px",
+              display: "flex", flexDirection: "column", gap: 10,
+            }}>
+              <button onClick={() => startGame(null)} style={{
+                background: "linear-gradient(135deg, #1a3a6a, #2a5298)",
+                border: "2px solid #4a90d9", borderRadius: 6,
+                color: "#ffd700", fontFamily: "'DotGothic16', monospace",
+                fontSize: 14, padding: "12px", cursor: "pointer", letterSpacing: 1,
+              }}>
+                ▶ 全問チャレンジ（{QUESTIONS.length}問）
+              </button>
+
+              <div style={{ fontSize: 10, color: "#4a6fa5", letterSpacing: 2, textAlign: "center", marginTop: 4 }}>
+                ── ドメイン別 ──
+              </div>
+
+              {Object.entries(DOMAIN_COLORS).map(([domain, color]) => {
+                const count = QUESTIONS.filter(q => q.domain === domain).length;
+                return (
+                  <button key={domain} onClick={() => startGame(domain)} style={{
+                    background: `linear-gradient(135deg, ${color}20, ${color}10)`,
+                    border: `1px solid ${color}60`, borderRadius: 6,
+                    color: "#e2e8f0", fontFamily: "'DotGothic16', monospace",
+                    fontSize: 12, padding: "10px 14px", cursor: "pointer",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                  }}>
+                    <span style={{ color }}>{domain}</span>
+                    <span style={{ fontSize: 10, color: "#546e7a" }}>{count}問</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // ===== ゲーム画面 =====
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes enemyFloat {
-          0%,100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-8px) scale(1.02); }
-        }
-        @keyframes glitch {
-          0%,100% { transform: translateX(0); }
-          20% { transform: translateX(-4px); }
-          40% { transform: translateX(4px); }
-          60% { transform: translateX(-2px); }
-          80% { transform: translateX(2px); }
-        }
-        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0} }
-        @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes dmgFloat {
-          0% { opacity:1; transform:translateY(0) scale(1.4); }
-          100% { opacity:0; transform:translateY(-60px) scale(0.8); }
-        }
-        @keyframes scanH {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        @keyframes charLunge {
-          0%,100% { transform: translateX(0); }
-          40% { transform: translateX(18px); }
-          60% { transform: translateX(-4px); }
-        }
-        @keyframes crystalSpin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        @keyframes borderGlow {
-          0%,100% { border-color: rgba(6,182,212,0.3); box-shadow: 0 0 15px rgba(6,182,212,0.1); }
-          50% { border-color: rgba(6,182,212,0.7); box-shadow: 0 0 30px rgba(6,182,212,0.3); }
-        }
+        @keyframes starPulse { 0%,100%{opacity:0.2} 50%{opacity:0.9} }
+        @keyframes floatDmg { 0%{opacity:1;transform:translateY(0) scale(1.3)} 100%{opacity:0;transform:translateY(-60px) scale(0.8)} }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        @keyframes enemyShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+        @keyframes slideIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes playerShake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(6px)} 75%{transform:translateX(-6px)} }
       `}</style>
 
       <div style={{
         minHeight: "100vh",
-        background: `
-          radial-gradient(ellipse at ${50 + Math.sin(bgShift * 0.017) * 10}% 30%, rgba(6,182,212,0.08) 0%, transparent 60%),
-          radial-gradient(ellipse at ${50 + Math.cos(bgShift * 0.013) * 10}% 80%, rgba(139,92,246,0.06) 0%, transparent 60%),
-          linear-gradient(160deg, #020b18 0%, #040d20 40%, #060a1c 100%)
-        `,
-        display: "flex",
-        flexDirection: "column",
-        fontFamily: "'Rajdhani', sans-serif",
-        overflow: "hidden",
-        position: "relative",
-        minHeight: "100dvh",
+        background: "linear-gradient(160deg, #060a18 0%, #0a1020 60%, #0e1428 100%)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontFamily: "'DotGothic16', monospace",
+        padding: 12, position: "relative", overflow: "hidden",
       }}>
-        {/* Scanline overlay */}
-        <div style={{
-          position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
-          background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px)",
-        }} />
+        {[...Array(30)].map((_, i) => (
+          <div key={i} style={{
+            position: "fixed", width: 2, height: 2, background: "#fff", borderRadius: "50%",
+            left: `${(i * 37 + 13) % 100}%`, top: `${(i * 23 + 7) % 70}%`,
+            animation: `starPulse ${1.5 + (i % 3) * 0.7}s infinite`,
+            animationDelay: `${(i * 0.13) % 2}s`, pointerEvents: "none",
+          }} />
+        ))}
 
-        {/* Decorative grid */}
-        <div style={{
-          position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0,
-          backgroundImage: `
-            linear-gradient(rgba(6,182,212,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(6,182,212,0.03) 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }} />
+        <div style={{ width: "100%", maxWidth: 540, position: "relative", zIndex: 1 }}>
 
-        <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+          {/* ヘッダー */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <button onClick={() => setShowMenu(true)} style={{
+              background: "transparent", border: "1px solid #2a4a7f",
+              borderRadius: 4, color: "#546e7a",
+              fontFamily: "'DotGothic16', monospace", fontSize: 10,
+              padding: "3px 8px", cursor: "pointer",
+            }}>◀ もどる</button>
+            <div style={{ fontSize: 9, color: accentColor, letterSpacing: 2 }}>{q?.domain}</div>
+            <div style={{ fontSize: 9, color: "#546e7a" }}>{qIndex + 1}/{filteredQuestions.length}</div>
+          </div>
 
-          {/* ── TOP: Domain + Question counter ── */}
+          {/* プログレスバー */}
+          <div style={{ height: 3, background: "#0d1628", borderRadius: 2, marginBottom: 10, border: "1px solid #1a2a4a" }}>
+            <div style={{
+              height: "100%", width: `${(qIndex / filteredQuestions.length) * 100}%`,
+              background: `linear-gradient(90deg, #4a6fa5, ${accentColor})`,
+              borderRadius: 2, transition: "width 0.8s ease",
+              boxShadow: `0 0 8px ${accentColor}`,
+            }} />
+          </div>
+
+          {/* バトルフィールド */}
           <div style={{
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            padding: "10px 16px 0",
+            background: "linear-gradient(180deg, #060e1e 0%, #0a1628 50%, #0d1a10 100%)",
+            border: `2px solid ${accentColor}40`,
+            borderRadius: 8, padding: "16px 20px 12px",
+            marginBottom: 8, minHeight: 180, position: "relative", overflow: "hidden",
+            boxShadow: `0 0 30px ${accentColor}15`,
           }}>
             <div style={{
-              fontFamily: "'Orbitron', monospace",
-              fontSize: 9, letterSpacing: 4,
-              color: accentColor,
-              textShadow: `0 0 12px ${accentColor}`,
-            }}>
-              AWS GDA-C01
-            </div>
-            <div style={{
-              fontSize: 10, color: "#475569", letterSpacing: 2,
-              fontFamily: "'Orbitron', monospace",
-            }}>
-              {qIndex + 1} / {QUESTIONS.length}
+              position: "absolute", bottom: 0, left: 0, right: 0, height: 32,
+              background: "linear-gradient(180deg, #0d1a10 0%, #060e08 100%)",
+              borderTop: `1px solid ${accentColor}20`,
+            }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", position: "relative" }}>
+              {/* プレイヤーステータス */}
+              <div style={{
+                background: "rgba(10,22,40,0.9)", border: "2px solid #2a4a7f",
+                borderRadius: 6, padding: "8px 14px",
+                animation: playerShaking ? "playerShake 0.3s ease" : "none",
+              }}>
+                <div style={{ fontSize: 12, color: "#ffd700", marginBottom: 6 }}>
+                  ゆうしゃ <span style={{ fontSize: 9, color: "#90caf9" }}>Lv.{playerLevel}</span>
+                </div>
+                {[
+                  { label: "HP", val: playerHp, max: PLAYER_MAX_HP, color: playerHp / PLAYER_MAX_HP > 0.5 ? "#66bb6a" : playerHp / PLAYER_MAX_HP > 0.25 ? "#ffa726" : "#ef5350" },
+                  { label: "MP", val: playerMp, max: PLAYER_MAX_MP, color: "#42a5f5" },
+                ].map(({ label, val, max, color }) => (
+                  <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                    <span style={{ fontSize: 9, color: label === "HP" ? "#ef5350" : "#42a5f5", width: 18 }}>{label}</span>
+                    <div style={{ width: 80, height: 5, background: "#0a1628", borderRadius: 3 }}>
+                      <div style={{ height: "100%", width: `${Math.max(0, val / max * 100)}%`, background: color, borderRadius: 3, transition: "width 0.5s" }} />
+                    </div>
+                    <span style={{ fontSize: 9, color: "#cfd8dc", width: 32, textAlign: "right" }}>{val}/{max}</span>
+                  </div>
+                ))}
+                <div style={{ fontSize: 9, color: "#546e7a", marginTop: 2 }}>EXP: {playerExp}</div>
+
+                {/* プレイヤーダメージ */}
+                {showDamage?.onPlayer && (
+                  <div style={{
+                    position: "absolute", top: "30%", left: "10%",
+                    fontSize: 22, fontWeight: "bold", color: "#ef5350",
+                    textShadow: "2px 2px 0 #000",
+                    animation: "floatDmg 1s ease-out forwards",
+                    pointerEvents: "none",
+                  }}>-{showDamage.value}</div>
+                )}
+              </div>
+
+              {/* モンスター */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                <div style={{ fontSize: 10, color: accentColor, letterSpacing: 1 }}>{monster.name}</div>
+                <div style={{
+                  fontSize: 80, lineHeight: 1, userSelect: "none",
+                  filter: monsterDefeated ? "grayscale(1) opacity(0.2)"
+                    : monsterFlashing ? "brightness(5)"
+                    : `drop-shadow(0 0 16px ${accentColor})`,
+                  animation: monsterShaking ? "enemyShake 0.3s ease" : "none",
+                  opacity: monsterDefeated ? 0 : 1,
+                  transition: "opacity 0.5s, filter 0.15s",
+                }}>
+                  {monster.emoji}
+                </div>
+                <div style={{ width: 130 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontSize: 9, color: accentColor }}>HP</span>
+                    <span style={{ fontSize: 9, color: "#546e7a" }}>{monsterHp}/100</span>
+                  </div>
+                  <div style={{ height: 5, background: "#111", borderRadius: 3 }}>
+                    <div style={{
+                      height: "100%", width: `${monsterHp}%`,
+                      background: monsterHp > 50 ? "#66bb6a" : monsterHp > 25 ? "#ffa726" : "#ef5350",
+                      borderRadius: 3, transition: "width 0.5s",
+                    }} />
+                  </div>
+                </div>
+
+                {/* モンスターダメージ */}
+                {showDamage?.correct && (
+                  <div style={{
+                    position: "absolute", top: "20%", right: "10%",
+                    fontSize: 26, fontWeight: "bold", color: "#ffd700",
+                    textShadow: "2px 2px 0 #000",
+                    animation: "floatDmg 1s ease-out forwards",
+                    pointerEvents: "none",
+                  }}>-{showDamage.value}</div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* ── BATTLE FIELD ── */}
+          {/* メッセージ */}
           <div style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
-            padding: "8px 16px",
-            position: "relative",
-            minHeight: 0,
+            background: "linear-gradient(135deg, #060e1e 0%, #0a1628 100%)",
+            border: `2px solid ${accentColor}50`, borderRadius: 6,
+            padding: "10px 14px", marginBottom: 6, minHeight: 52,
+            boxShadow: `0 0 12px ${accentColor}15`, position: "relative",
           }}>
-
-            {/* Enemy area */}
-            <div style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              flex: 1,
-              position: "relative",
-              minHeight: 160,
-            }}>
-
-              {/* Enemy HP bar (top-left style) */}
-              <div style={{
-                position: "absolute", top: 0, left: 0,
-                background: "rgba(2,11,24,0.85)",
-                border: `1px solid ${enemy.color}40`,
-                borderRadius: 6,
-                padding: "8px 14px",
-                minWidth: 180,
-                backdropFilter: "blur(8px)",
-              }}>
-                <div style={{ fontSize: 12, color: enemy.color, fontFamily: "'Orbitron', monospace", letterSpacing: 1, marginBottom: 4 }}>
-                  {enemy.name}
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 9, color: "#ef4444" }}>HP</span>
-                  <div style={{ flex: 1, height: 6, background: "rgba(0,0,0,0.5)", borderRadius: 3, overflow: "hidden" }}>
-                    <div style={{
-                      height: "100%",
-                      width: `${enemyHp}%`,
-                      background: enemyHp > 50 ? "#4ade80" : enemyHp > 25 ? "#facc15" : "#ef4444",
-                      transition: "width 0.5s ease",
-                      boxShadow: `0 0 8px currentColor`,
-                      borderRadius: 3,
-                    }} />
-                  </div>
-                  <span style={{ fontSize: 9, color: "#64748b", fontFamily: "monospace" }}>{enemyHp}</span>
-                </div>
+            {messages.map((m, i) => (
+              <div key={i} style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.7 }}>
+                {i === messages.length - 1 ? <TypewriterText text={m} /> : m}
               </div>
+            ))}
+            {(phase === "question" || phase === "result") && (
+              <span style={{ position: "absolute", bottom: 6, right: 10, fontSize: 12, color: accentColor, animation: "blink 0.8s infinite" }}>▼</span>
+            )}
+          </div>
 
-              {/* Enemy sprite */}
-              <div style={{ position: "relative" }}>
-                {/* Glow ring */}
-                <div style={{
-                  position: "absolute",
-                  width: 120, height: 20,
-                  borderRadius: "50%",
-                  background: `radial-gradient(ellipse, ${enemy.color}30 0%, transparent 70%)`,
-                  bottom: -10, left: "50%",
-                  transform: "translateX(-50%)",
-                }} />
-                <div style={{
-                  fontSize: 96,
-                  animation: enemyShake ? "glitch 0.3s ease" : "enemyFloat 3s ease-in-out infinite",
-                  filter: enemyFlash
-                    ? "brightness(5) saturate(0)"
-                    : `drop-shadow(0 0 20px ${enemy.color}) drop-shadow(0 0 40px ${enemy.color}60)`,
-                  userSelect: "none",
-                  lineHeight: 1,
-                  transition: "filter 0.1s",
+          {/* 問題文 */}
+          {(phase === "question" || phase === "result" || phase === "animating") && q && (
+            <div style={{
+              background: "rgba(6,14,30,0.85)", border: `1px solid ${accentColor}30`,
+              borderRadius: 6, padding: "8px 14px", marginBottom: 6,
+              fontSize: 12, color: "#b0bec5", lineHeight: 1.7,
+            }}>
+              <span style={{ color: accentColor, fontSize: 9, marginRight: 6, letterSpacing: 1 }}>【{q.domain}】</span>
+              {q.question}
+            </div>
+          )}
+
+          {/* 選択肢 */}
+          {(phase === "question" || phase === "result") && q && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 6 }}>
+              {q.choices.map((c, i) => (
+                <button key={i} onClick={() => handleAnswer(i)} disabled={answered} style={{
+                  background: choiceBg(i),
+                  border: `2px solid ${choiceBorderColor(i)}`,
+                  borderRadius: 4, color: choiceTextColor(i),
+                  fontFamily: "'DotGothic16', monospace",
+                  fontSize: 11, padding: "8px 10px",
+                  cursor: answered ? "default" : "pointer",
+                  textAlign: "left", lineHeight: 1.4,
+                  display: "flex", alignItems: "flex-start", gap: 6,
+                  transition: "all 0.2s",
                 }}>
-                  {enemy.emoji}
-                </div>
-
-                {/* Damage number */}
-                {showDamage && !showDamage.onParty && (
-                  <div style={{
-                    position: "absolute",
-                    top: -20, left: "50%",
-                    transform: "translateX(-50%)",
-                    fontSize: 28,
-                    fontFamily: "'Orbitron', monospace",
-                    fontWeight: 900,
-                    color: showDamage.correct ? "#fbbf24" : "#f87171",
-                    textShadow: `0 0 20px ${showDamage.correct ? "#fbbf24" : "#f87171"}`,
-                    animation: "dmgFloat 1.2s ease-out forwards",
-                    whiteSpace: "nowrap",
-                    pointerEvents: "none",
-                  }}>
-                    {showDamage.value}
-                  </div>
-                )}
-
-                {/* Particle effects */}
-                {showParticle && (
-                  <div style={{ position: "absolute", inset: "-30px", pointerEvents: "none" }}>
-                    {[...Array(8)].map((_, i) => (
-                      <div key={i} style={{
-                        position: "absolute",
-                        width: 6, height: 6,
-                        borderRadius: "50%",
-                        background: accentColor,
-                        left: `${30 + Math.cos(i / 8 * Math.PI * 2) * 40}%`,
-                        top: `${30 + Math.sin(i / 8 * Math.PI * 2) * 40}%`,
-                        boxShadow: `0 0 10px ${accentColor}`,
-                        animation: `flash 0.3s ease ${i * 0.05}s infinite`,
-                      }} />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Question area - overlaid when in question phase */}
-              {phase === "question" && (
-                <div style={{
-                  position: "absolute",
-                  bottom: 0, left: 0, right: 0,
-                  background: "linear-gradient(135deg, rgba(2,11,24,0.96) 0%, rgba(4,13,32,0.96) 100%)",
-                  border: `1px solid ${accentColor}40`,
-                  borderRadius: 8,
-                  padding: "12px 16px",
-                  backdropFilter: "blur(12px)",
-                  animation: "fadeUp 0.3s ease",
-                  boxShadow: `0 0 30px ${accentColor}20`,
-                }}>
-                  {/* Domain tag */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                    <div style={{
-                      width: 6, height: 6, borderRadius: "50%",
-                      background: accentColor,
-                      boxShadow: `0 0 8px ${accentColor}`,
-                    }} />
-                    <span style={{ fontSize: 9, color: accentColor, letterSpacing: 2, fontFamily: "'Orbitron', monospace" }}>
-                      {q.domain}
-                    </span>
-                  </div>
-                  <div style={{
-                    fontSize: 13,
-                    color: "#e2e8f0",
-                    lineHeight: 1.7,
-                    fontWeight: 300,
-                    letterSpacing: 0.3,
-                  }}>
-                    {q.question}
-                  </div>
-                </div>
-              )}
+                  <span style={{ color: answered && i === q.correct ? "#66bb6a" : answered && i === selectedIdx ? "#ef5350" : accentColor, flexShrink: 0 }}>
+                    {answered ? (i === q.correct ? "✓" : i === selectedIdx ? "✗" : ["Ａ","Ｂ","Ｃ","Ｄ"][i]) : ["Ａ","Ｂ","Ｃ","Ｄ"][i]}
+                  </span>
+                  {c}
+                </button>
+              ))}
             </div>
+          )}
 
-            {/* Party status bar */}
+          {/* 解説 */}
+          {showExplanation && q?.explanation && (
             <div style={{
-              background: "linear-gradient(135deg, rgba(2,11,24,0.92) 0%, rgba(4,13,32,0.92) 100%)",
-              border: "1px solid rgba(6,182,212,0.2)",
-              borderRadius: 8,
-              padding: "10px 14px",
-              backdropFilter: "blur(12px)",
-              marginBottom: 8,
-              animation: "borderGlow 3s infinite",
+              background: "linear-gradient(135deg, #0a1a0a, #0d200d)",
+              border: "1px solid #2e5e2e", borderRadius: 6,
+              padding: "8px 14px", marginBottom: 6,
+              fontSize: 11, color: "#a5d6a7", lineHeight: 1.6,
+              animation: "slideIn 0.3s ease",
             }}>
-              <div style={{ display: "flex", gap: 12 }}>
-                {party.map((p, i) => {
-                  const isActive = i === activeChar && (phase === "command" || phase === "question");
-                  const isAttacking = charAttack === i;
-                  return (
-                    <div key={i} style={{
-                      flex: 1,
-                      padding: "6px 8px",
-                      borderRadius: 6,
-                      background: isActive ? `${accentColor}12` : "transparent",
-                      border: `1px solid ${isActive ? accentColor + "50" : "transparent"}`,
-                      transition: "all 0.3s",
-                      animation: isAttacking ? "charLunge 0.5s ease" : "none",
-                      position: "relative",
-                    }}>
-                      {/* Active indicator */}
-                      {isActive && (
-                        <div style={{
-                          position: "absolute", top: -8, left: "50%",
-                          transform: "translateX(-50%)",
-                          fontSize: 10, color: accentColor,
-                          animation: "pulse 0.6s infinite",
-                        }}>▼</div>
-                      )}
-
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                          <span style={{ fontSize: 14 }}>{p.emoji}</span>
-                          <div>
-                            <div style={{ fontSize: 10, fontWeight: 600, color: isActive ? accentColor : "#94a3b8", fontFamily: "'Rajdhani', sans-serif", letterSpacing: 0.5 }}>
-                              {p.name}
-                            </div>
-                            <div style={{ fontSize: 8, color: "#475569", letterSpacing: 1 }}>{p.job}</div>
-                          </div>
-                        </div>
-                        {showDamage?.onParty && i === activeChar && (
-                          <div style={{
-                            fontSize: 14, color: "#f87171",
-                            fontFamily: "'Orbitron', monospace",
-                            fontWeight: 700,
-                            animation: "dmgFloat 1s ease-out forwards",
-                          }}>-{showDamage.value}</div>
-                        )}
-                      </div>
-
-                      <div style={{ display: "flex", gap: 4, marginBottom: 3, alignItems: "center" }}>
-                        <span style={{ fontSize: 8, color: "#ef4444", width: 16 }}>HP</span>
-                        <div style={{ flex: 1 }}><HPBar hp={p.hp} maxHp={p.maxHp} /></div>
-                        <span style={{ fontSize: 8, color: "#64748b", fontFamily: "monospace", width: 28, textAlign: "right" }}>{p.hp}</span>
-                      </div>
-                      <div style={{ display: "flex", gap: 4, marginBottom: 4, alignItems: "center" }}>
-                        <span style={{ fontSize: 8, color: "#60a5fa", width: 16 }}>MP</span>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ width: "100%", height: 4, background: "rgba(0,0,0,0.5)", borderRadius: 2, overflow: "hidden" }}>
-                            <div style={{ height: "100%", width: `${p.mp / p.maxMp * 100}%`, background: "#3b82f6", borderRadius: 2, transition: "width 0.4s" }} />
-                          </div>
-                        </div>
-                        <span style={{ fontSize: 8, color: "#64748b", fontFamily: "monospace", width: 28, textAlign: "right" }}>{p.mp}</span>
-                      </div>
-
-                      {/* ATB gauge */}
-                      <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                        <span style={{ fontSize: 8, color: "#facc15", width: 16 }}>ATB</span>
-                        <div style={{ flex: 1 }}>
-                          <ATBBar value={atbValues[i]} max={100} color="#facc15" active={atbValues[i] >= 100} />
-                        </div>
-                        {atbValues[i] >= 100 && (
-                          <span style={{ fontSize: 7, color: "#facc15", animation: "pulse 0.5s infinite", width: 28, textAlign: "right", fontFamily: "'Orbitron', monospace" }}>ACT</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <span style={{ color: "#66bb6a", marginRight: 6 }}>💡 かいせつ:</span>
+              {q.explanation}
             </div>
+          )}
 
-            {/* Message / Command window */}
+          {/* 次へボタン */}
+          {phase === "result" && (
+            <button onClick={handleNext} style={{
+              width: "100%",
+              background: `linear-gradient(135deg, #0d2040, #1a3a6a)`,
+              border: `2px solid ${accentColor}`,
+              borderRadius: 6, color: "#ffd700",
+              fontFamily: "'DotGothic16', monospace",
+              fontSize: 13, padding: "10px",
+              cursor: "pointer", letterSpacing: 2,
+              boxShadow: `0 0 12px ${accentColor}30`,
+            }}>
+              ▶ つぎへ ({qIndex + 1}/{filteredQuestions.length})
+            </button>
+          )}
+
+          {/* アニメーション中 */}
+          {phase === "animating" && (
+            <div style={{ textAlign: "center", padding: 14, color: "#4a6fa5", fontSize: 12, letterSpacing: 3 }}>
+              ・・・
+            </div>
+          )}
+
+          {/* ゲームオーバー */}
+          {phase === "gameover" && (
             <div style={{
-              background: "linear-gradient(135deg, rgba(2,11,24,0.95) 0%, rgba(4,13,32,0.95) 100%)",
-              border: `1px solid ${accentColor}30`,
-              borderRadius: 8,
-              overflow: "hidden",
-              backdropFilter: "blur(12px)",
-              boxShadow: `0 0 20px ${accentColor}10`,
+              background: "linear-gradient(135deg, #1a0505, #2d0a0a)",
+              border: "2px solid #c62828", borderRadius: 8, padding: 20, textAlign: "center",
             }}>
-              {/* Scanline accent */}
-              <div style={{
-                height: 2,
-                background: `linear-gradient(90deg, transparent, ${accentColor}, transparent)`,
-                opacity: 0.6,
-              }} />
-
-              <div style={{ display: "flex", minHeight: 90 }}>
-                {/* Message area */}
-                <div style={{ flex: 1, padding: "12px 16px", borderRight: "1px solid rgba(255,255,255,0.05)" }}>
-                  {messages.map((m, i) => (
-                    <div key={i} style={{
-                      fontSize: 13, color: i === 0 ? "#e2e8f0" : "#94a3b8",
-                      lineHeight: 1.7, fontWeight: i === 0 ? 400 : 300,
-                      whiteSpace: "pre-line",
-                      animation: "fadeUp 0.2s ease",
-                    }}>
-                      {m}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Command / Answer area */}
-                <div style={{ width: 200, padding: "10px 12px" }}>
-                  {phase === "command" && (
-                    <div style={{ animation: "fadeUp 0.2s ease" }}>
-                      <div style={{ fontSize: 9, color: accentColor, letterSpacing: 3, marginBottom: 8, fontFamily: "'Orbitron', monospace" }}>
-                        COMMAND
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {COMMANDS.map((cmd, i) => {
-                          const ready = atbValues[activeChar] >= 100;
-                          return (
-                            <button key={cmd} onClick={() => ready && handleCommand(cmd)} style={{
-                              background: cmd === "たたかう" && ready ? `${accentColor}15` : "transparent",
-                              border: "none",
-                              borderLeft: `2px solid ${cmd === "たたかう" && ready ? accentColor : "transparent"}`,
-                              padding: "4px 10px",
-                              textAlign: "left",
-                              color: !ready ? "#334155"
-                                : cmd === "たたかう" ? accentColor
-                                : cmd === "にげる" ? "#ef4444"
-                                : "#64748b",
-                              fontSize: 13,
-                              fontFamily: "'Rajdhani', sans-serif",
-                              fontWeight: 600,
-                              cursor: ready ? "pointer" : "default",
-                              letterSpacing: 1,
-                              transition: "all 0.2s",
-                            }}>
-                              {!ready && i === 0 ? (
-                                <span style={{ animation: "pulse 1s infinite", color: "#334155" }}>── ATB待機中 ──</span>
-                              ) : cmd}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {phase === "question" && (
-                    <div style={{ animation: "fadeUp 0.2s ease" }}>
-                      <div style={{ fontSize: 9, color: accentColor, letterSpacing: 3, marginBottom: 8, fontFamily: "'Orbitron', monospace" }}>
-                        ANSWER
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-                        {q.choices.map((c, i) => (
-                          <button key={i} onClick={() => handleAnswer(i)} style={{
-                            background: selectedAnswer === i ? `${accentColor}20` : "transparent",
-                            border: "none",
-                            borderLeft: `2px solid ${selectedAnswer === i ? accentColor : "#1e293b"}`,
-                            padding: "4px 8px",
-                            textAlign: "left",
-                            color: "#cbd5e1",
-                            fontSize: 11,
-                            fontFamily: "'Rajdhani', sans-serif",
-                            fontWeight: 400,
-                            cursor: "pointer",
-                            lineHeight: 1.4,
-                            transition: "all 0.15s",
-                          }}
-                            onMouseEnter={e => { e.currentTarget.style.color = accentColor; e.currentTarget.style.borderLeftColor = accentColor; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = "#cbd5e1"; e.currentTarget.style.borderLeftColor = "#1e293b"; }}
-                          >
-                            <span style={{ color: accentColor, marginRight: 6, fontFamily: "'Orbitron', monospace", fontSize: 9 }}>
-                              {["①", "②", "③", "④"][i]}
-                            </span>
-                            {c}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {phase === "animating" && (
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", gap: 4 }}>
-                      {[0, 1, 2].map(i => (
-                        <div key={i} style={{
-                          width: 6, height: 6, borderRadius: "50%",
-                          background: accentColor,
-                          animation: `pulse 0.8s ease ${i * 0.2}s infinite`,
-                        }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
+              <div style={{ fontSize: 20, color: "#ef5350", letterSpacing: 4, marginBottom: 8 }}>GAME OVER</div>
+              <div style={{ fontSize: 11, color: "#78909c", marginBottom: 4 }}>せいかい: {totalCorrect}もん / {qIndex + 1}もん</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 12 }}>
+                <button onClick={() => { setQIndex(0); setPlayerHp(PLAYER_MAX_HP); setPlayerMp(PLAYER_MAX_MP); setPlayerLevel(1); setPlayerExp(0); setTotalCorrect(0); setTotalGold(0); initBattle(); }} style={{
+                  background: "linear-gradient(135deg, #4a0a0a, #7a1010)",
+                  border: "2px solid #c62828", borderRadius: 4,
+                  color: "#ffd700", fontFamily: "'DotGothic16', monospace",
+                  fontSize: 12, padding: "8px 18px", cursor: "pointer",
+                }}>▶ もう一度</button>
+                <button onClick={() => setShowMenu(true)} style={{
+                  background: "transparent", border: "1px solid #546e7a",
+                  borderRadius: 4, color: "#546e7a",
+                  fontFamily: "'DotGothic16', monospace",
+                  fontSize: 12, padding: "8px 18px", cursor: "pointer",
+                }}>メニューへ</button>
               </div>
-
-              {/* Bottom accent */}
-              <div style={{
-                height: 2,
-                background: `linear-gradient(90deg, transparent, ${accentColor}60, transparent)`,
-              }} />
             </div>
+          )}
 
+          {/* クリア */}
+          {phase === "clear" && (
+            <div style={{
+              background: "linear-gradient(135deg, #051a05, #0a2d0a)",
+              border: "2px solid #388e3c", borderRadius: 8, padding: 20, textAlign: "center",
+            }}>
+              <div style={{ fontSize: 18, color: "#ffd700", letterSpacing: 4, marginBottom: 8 }}>🏆 クリア！</div>
+              <div style={{ fontSize: 12, color: "#a5d6a7", marginBottom: 4 }}>せいかい: {totalCorrect + 1}もん / {filteredQuestions.length}もん</div>
+              <div style={{ fontSize: 11, color: "#ffe082", marginBottom: 4 }}>かくとくゴールド: {totalGold + 3}G</div>
+              <div style={{ fontSize: 11, color: "#90caf9", marginBottom: 14 }}>さいしゅうレベル: Lv.{playerLevel}</div>
+              <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <button onClick={() => { setQIndex(0); setPlayerHp(PLAYER_MAX_HP); setPlayerMp(PLAYER_MAX_MP); setPlayerLevel(1); setPlayerExp(0); setTotalCorrect(0); setTotalGold(0); initBattle(); }} style={{
+                  background: "linear-gradient(135deg, #1b5e20, #2e7d32)",
+                  border: "2px solid #66bb6a", borderRadius: 4,
+                  color: "#ffd700", fontFamily: "'DotGothic16', monospace",
+                  fontSize: 12, padding: "8px 18px", cursor: "pointer",
+                }}>▶ もう一度</button>
+                <button onClick={() => setShowMenu(true)} style={{
+                  background: "transparent", border: "1px solid #546e7a",
+                  borderRadius: 4, color: "#546e7a",
+                  fontFamily: "'DotGothic16', monospace",
+                  fontSize: 12, padding: "8px 18px", cursor: "pointer",
+                }}>メニューへ</button>
+              </div>
+            </div>
+          )}
+
+          {/* ドット進捗 */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 4, marginTop: 10, flexWrap: "wrap" }}>
+            {filteredQuestions.map((fq, i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: i < qIndex ? DOMAIN_COLORS[fq.domain] : i === qIndex ? "#ffd700" : "#1a2a4a",
+                border: "1px solid #2a4a7f", transition: "background 0.5s",
+              }} />
+            ))}
+          </div>
+
+          {/* ドメイン凡例 */}
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, marginTop: 6, flexWrap: "wrap" }}>
+            {Object.entries(DOMAIN_COLORS).map(([d, c]) => (
+              <div key={d} style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: c }} />
+                <span style={{ fontSize: 8, color: "#546e7a" }}>{d}</span>
+              </div>
+            ))}
           </div>
         </div>
-
-        {/* ── GAME OVER overlay ── */}
-        {phase === "gameover" && (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            background: "rgba(0,0,0,0.92)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            animation: "fadeUp 0.6s ease",
-          }}>
-            <div style={{
-              textAlign: "center",
-              border: "1px solid rgba(239,68,68,0.3)",
-              borderRadius: 12,
-              padding: "40px 50px",
-              background: "rgba(127,29,29,0.2)",
-              backdropFilter: "blur(20px)",
-            }}>
-              <div style={{
-                fontFamily: "'Orbitron', monospace",
-                fontSize: 32, fontWeight: 900,
-                color: "#ef4444",
-                letterSpacing: 8,
-                textShadow: "0 0 30px #ef4444",
-                marginBottom: 20,
-              }}>GAME OVER</div>
-              <div style={{ fontSize: 14, color: "#94a3b8", marginBottom: 6 }}>
-                正解数: {totalCorrect} / {qIndex + 1}
-              </div>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 28 }}>
-                到達問題: 第{qIndex + 1}問
-              </div>
-              <button onClick={handleRestart} style={{
-                background: "linear-gradient(135deg, rgba(239,68,68,0.2), rgba(239,68,68,0.1))",
-                border: "1px solid rgba(239,68,68,0.5)",
-                borderRadius: 6, padding: "10px 32px",
-                color: "#f87171",
-                fontFamily: "'Orbitron', monospace",
-                fontSize: 12, cursor: "pointer", letterSpacing: 2,
-              }}>RETRY</button>
-            </div>
-          </div>
-        )}
-
-        {/* ── CLEAR overlay ── */}
-        {phase === "clear" && (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 100,
-            background: "rgba(0,0,0,0.9)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            animation: "fadeUp 0.6s ease",
-          }}>
-            <div style={{
-              textAlign: "center",
-              border: `1px solid ${accentColor}50`,
-              borderRadius: 12,
-              padding: "40px 50px",
-              background: `rgba(6,182,212,0.05)`,
-              backdropFilter: "blur(20px)",
-              boxShadow: `0 0 60px ${accentColor}20`,
-            }}>
-              <div style={{ fontSize: 48, marginBottom: 12, animation: "crystalSpin 4s linear infinite" }}>💎</div>
-              <div style={{
-                fontFamily: "'Orbitron', monospace",
-                fontSize: 20, fontWeight: 900,
-                color: accentColor,
-                letterSpacing: 4,
-                textShadow: `0 0 30px ${accentColor}`,
-                marginBottom: 8,
-              }}>MISSION COMPLETE</div>
-              <div style={{ fontSize: 13, color: "#4ade80", marginBottom: 6 }}>
-                全{QUESTIONS.length}問クリア！
-              </div>
-              <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 6 }}>
-                正解数: {totalCorrect + 1} / {QUESTIONS.length}
-              </div>
-              <div style={{ fontSize: 10, color: "#475569", marginBottom: 28 }}>
-                AWS GDA-C01 認定への道が開かれた
-              </div>
-              <button onClick={handleRestart} style={{
-                background: `linear-gradient(135deg, ${accentColor}20, ${accentColor}10)`,
-                border: `1px solid ${accentColor}60`,
-                borderRadius: 6, padding: "10px 32px",
-                color: accentColor,
-                fontFamily: "'Orbitron', monospace",
-                fontSize: 12, cursor: "pointer", letterSpacing: 2,
-              }}>PLAY AGAIN</button>
-            </div>
-          </div>
-        )}
       </div>
     </>
   );
