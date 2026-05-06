@@ -1,5 +1,3 @@
-import { quizData } from "./questions.js";
-const QUESTIONS = quizData;
 import { useState, useEffect, useRef } from "react";
 import { quizData } from './questions.js';
 const QUESTIONS = quizData || [];
