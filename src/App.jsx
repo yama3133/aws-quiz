@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { quizData as QUESTIONS } from './questions.js';
+import { quizData } from './questions.js';
+const QUESTIONS = quizData || [];
 
 const DOMAIN_COLORS = {
   "生成AIの基礎": "#4fc3f7",
@@ -220,8 +221,8 @@ export default function DQQuiz() {
 
           <div style={{ width: "100%", maxWidth: 480, animation: "fadeIn 0.5s ease" }}>
             <div style={{ textAlign: "center", marginBottom: 28 }}>
-              <div style={{ fontSize: 10, color: "#4a6fa5", letterSpacing: 5, marginBottom: 10 }}>⚔ AWS GDA-C01 ⚔</div>
-              <div style={{ fontSize: 22, color: "#ffd700", textShadow: "0 0 20px #ffd700", marginBottom: 6 }}>
+              <div style={{ fontSize: 9, color: "#4a6fa5", letterSpacing: 3, marginBottom: 10 }}>⚔ AWS Certified Generative AI Developer Professional ⚔</div>
+              <div style={{ fontSize: 20, color: "#ffd700", textShadow: "0 0 20px #ffd700", marginBottom: 6 }}>
                 もぎしけん　ドラクエ
               </div>
               <div style={{ fontSize: 11, color: "#546e7a" }}>全{QUESTIONS.length}問　ドメイン別に挑戦できます</div>
