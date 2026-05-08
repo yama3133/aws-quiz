@@ -223,7 +223,7 @@ export default function DQQuiz() {
             <div style={{ textAlign: "center", marginBottom: 28 }}>
               <div style={{ fontSize: 9, color: "#4a6fa5", letterSpacing: 3, marginBottom: 10 }}>⚔ AWS Certified Generative AI Developer Professional ⚔</div>
               <div style={{ fontSize: 20, color: "#ffd700", textShadow: "0 0 20px #ffd700", marginBottom: 6 }}>
-                もぎしけん　ドラクエ
+                もぎしけん
               </div>
               <div style={{ fontSize: 11, color: "#546e7a" }}>全{QUESTIONS.length}問　ドメイン別に挑戦できます</div>
             </div>
