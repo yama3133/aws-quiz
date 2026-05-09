@@ -1,284 +1,282 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { questions as QUESTIONS } from './questions.js';
 
 const MONSTERS = [
-  { name: "プロンプトスライム", emoji: "🟦", color: "#4fc3f7" },
-  { name: "トークンこうもり", emoji: "🦇", color: "#90caf9" },
-  { name: "エンベディングゴースト", emoji: "👻", color: "#ce93d8" },
-  { name: "RAGゾンビ", emoji: "🧟", color: "#a5d6a7" },
-  { name: "ハルシネーションスライム", emoji: "🫧", color: "#80deea" },
-  { name: "ファインチューンオーク", emoji: "🪓", color: "#ffcc80" },
-  { name: "LoRAリッチ", emoji: "🧬", color: "#f48fb1" },
-  { name: "ベクトルウィッチ", emoji: "🧙‍♀️", color: "#b39ddb" },
-  { name: "チャンキングゴブリン", emoji: "🪨", color: "#bcaaa4" },
-  { name: "コサインデーモン", emoji: "😈", color: "#ef9a9a" },
-  { name: "メタルスライム", emoji: "🔘", color: "#b0bec5" },
-  { name: "ガードレールナイト", emoji: "🛡️", color: "#80cbc4" },
-  { name: "プライバシーリンク", emoji: "🔗", color: "#90caf9" },
-  { name: "PIIマスカー", emoji: "🎭", color: "#f48fb1" },
-  { name: "クロスリージョンドラゴン", emoji: "🐉", color: "#ef5350" },
-  { name: "バッチインファレンスベア", emoji: "🐻", color: "#ffcc80" },
-  { name: "ストリームスペクター", emoji: "💫", color: "#80deea" },
-  { name: "コンバースナイト", emoji: "⚔️", color: "#4fc3f7" },
-  { name: "アクショングループドラゴン", emoji: "🐲", color: "#a5d6a7" },
-  { name: "ReActウォーリア", emoji: "🗡️", color: "#ffb74d" },
-  { name: "トレースデーモン", emoji: "🔍", color: "#ce93d8" },
-  { name: "クエリリライタ", emoji: "✏️", color: "#80cbc4" },
-  { name: "ハイブリッドサーチャー", emoji: "🔎", color: "#90caf9" },
-  { name: "リランクゴーレム", emoji: "🗿", color: "#bcaaa4" },
-  { name: "セマンティックチャンカー", emoji: "✂️", color: "#f48fb1" },
-  { name: "メタデータフィルター", emoji: "🗂️", color: "#b39ddb" },
-  { name: "インジェスチョンワーム", emoji: "🪱", color: "#a5d6a7" },
-  { name: "OpenSearchウルフ", emoji: "🐺", color: "#4fc3f7" },
-  { name: "pgvectorスネーク", emoji: "🐍", color: "#66bb6a" },
-  { name: "マトリョーシカスライム", emoji: "🪆", color: "#ce93d8" },
-  { name: "ANNスコーピオン", emoji: "🦂", color: "#ffb74d" },
-  { name: "QuantizeキメラQ", emoji: "⚡", color: "#ffd54f" },
-  { name: "プルーニングゴースト", emoji: "✂️", color: "#b0bec5" },
-  { name: "蒸留デーモン", emoji: "🧪", color: "#80deea" },
-  { name: "ROUGEワイバーン", emoji: "🦅", color: "#ef5350" },
-  { name: "BLEUドラキー", emoji: "💙", color: "#90caf9" },
-  { name: "パープレキシティゴースト", emoji: "🌀", color: "#ce93d8" },
-  { name: "フェイスフルネスドラゴン", emoji: "🔥", color: "#ff7043" },
-  { name: "コンテキストプレシジョン", emoji: "🎯", color: "#66bb6a" },
-  { name: "コンテキストリコール", emoji: "📡", color: "#4fc3f7" },
-  { name: "RLHFウォーリア", emoji: "🤺", color: "#ffb74d" },
-  { name: "DPOナイト", emoji: "🏇", color: "#b39ddb" },
-  { name: "LLMジャッジ", emoji: "⚖️", color: "#90caf9" },
-  { name: "グラウンドトゥルースゴースト", emoji: "👁️", color: "#80deea" },
-  { name: "ロバストネスワーム", emoji: "🛡️", color: "#a5d6a7" },
-  { name: "バイアスデーモン", emoji: "😤", color: "#ef9a9a" },
-  { name: "トキシシティスライム", emoji: "☠️", color: "#ff7043" },
-  { name: "クラリファイサー", emoji: "🔭", color: "#80cbc4" },
-  { name: "SHAPウィザード", emoji: "🧙", color: "#ce93d8" },
-  { name: "ベンチマークドラゴン", emoji: "📊", color: "#ffb74d" },
-  { name: "プロビジョンドスループット", emoji: "🏭", color: "#bcaaa4" },
-  { name: "バッチジョブゴーレム", emoji: "🤖", color: "#b0bec5" },
-  { name: "ストレージコストモンスター", emoji: "💾", color: "#90caf9" },
-  { name: "マックストークンデーモン", emoji: "🔢", color: "#f48fb1" },
-  { name: "テンパラチャーウィッチ", emoji: "🌡️", color: "#ce93d8" },
-  { name: "TopPスペクター", emoji: "🎲", color: "#80deea" },
-  { name: "TopKゴブリン", emoji: "🎰", color: "#ffcc80" },
-  { name: "ストップシーケンスゾンビ", emoji: "🛑", color: "#ef9a9a" },
-  { name: "フリークエンシーペナルティ", emoji: "🔄", color: "#4fc3f7" },
-  { name: "プレゼンスペナルティ", emoji: "👋", color: "#a5d6a7" },
-  { name: "マルチモーダルドラゴン", emoji: "🦄", color: "#ce93d8" },
-  { name: "ビジョンワイバーン", emoji: "👀", color: "#90caf9" },
-  { name: "Base64エンコーダー", emoji: "🔐", color: "#80cbc4" },
-  { name: "アウトペイントスライム", emoji: "🎨", color: "#ffb74d" },
-  { name: "インペイントゴースト", emoji: "🖌️", color: "#f48fb1" },
-  { name: "ネガティブプロンプター", emoji: "🚫", color: "#ef5350" },
-  { name: "スタイルトランスファー", emoji: "🎭", color: "#b39ddb" },
-  { name: "ウォーターマークゴーレム", emoji: "💧", color: "#4fc3f7" },
-  { name: "デジタル透かしデーモン", emoji: "🔏", color: "#80deea" },
-  { name: "KMSキーウォーリア", emoji: "🗝️", color: "#ffd54f" },
-  { name: "PrivateLinkナイト", emoji: "🔗", color: "#90caf9" },
-  { name: "VPCエンドポイントゴースト", emoji: "🌐", color: "#a5d6a7" },
-  { name: "CloudTrailスカウト", emoji: "🕵️", color: "#bcaaa4" },
-  { name: "IAMポリシーウォーリア", emoji: "📋", color: "#ffb74d" },
-  { name: "最小権限デーモン", emoji: "🔒", color: "#ef9a9a" },
-  { name: "責任共有ドラゴン", emoji: "🤝", color: "#66bb6a" },
-  { name: "コンプライアンスゴーレム", emoji: "📜", color: "#ce93d8" },
-  { name: "HIPAAウォーリア", emoji: "🏥", color: "#4fc3f7" },
-  { name: "GDPRデーモン", emoji: "🌍", color: "#90caf9" },
-  { name: "モデルインボケーションロガー", emoji: "📝", color: "#80cbc4" },
-  { name: "デリミタゴブリン", emoji: "🪣", color: "#ffcc80" },
-  { name: "サニタイズウィッチ", emoji: "🧹", color: "#f48fb1" },
-  { name: "HITLナイト", emoji: "🧑‍⚖️", color: "#b39ddb" },
-  { name: "コンテキストグラウンディング", emoji: "⚓", color: "#80deea" },
-  { name: "デナイドトピックデーモン", emoji: "🚷", color: "#ef5350" },
-  { name: "ワードフィルターゾンビ", emoji: "🚫", color: "#ef9a9a" },
-  { name: "センシティブインフォゴースト", emoji: "🔕", color: "#b0bec5" },
-  { name: "コンテントフィルタードラゴン", emoji: "🛡️", color: "#ff7043" },
-  { name: "エージェントエイリアス", emoji: "🎭", color: "#ce93d8" },
-  { name: "バージョンコントローラー", emoji: "📦", color: "#90caf9" },
-  { name: "ユーザーコンファメーション", emoji: "✅", color: "#66bb6a" },
-  { name: "セッションDynamoゴースト", emoji: "💬", color: "#80deea" },
-  { name: "スタックフォームドラゴン", emoji: "📚", color: "#ffb74d" },
-  { name: "ステップファンクションナイト", emoji: "🔀", color: "#4fc3f7" },
-  { name: "EventStreamスペクター", emoji: "📡", color: "#b39ddb" },
-  { name: "スロットリングデーモン", emoji: "⏱️", color: "#ef9a9a" },
-  { name: "エクスポネンシャルバックオフ", emoji: "📈", color: "#a5d6a7" },
-  { name: "マルチリージョンドラゴン", emoji: "🌍", color: "#ce93d8" },
-  { name: "クロスリージョンスライム", emoji: "🌏", color: "#4fc3f7" },
-  { name: "カスタムRAGウォーリア", emoji: "⚗️", color: "#80cbc4" },
-  { name: "フルマネージドRAG", emoji: "🤖", color: "#ffcc80" },
-  { name: "CitationゴーストQ", emoji: "📎", color: "#f48fb1" },
-  { name: "リトリーブアンドジェネレート", emoji: "🎣", color: "#90caf9" },
-  { name: "コンバートAPIナイト", emoji: "🔄", color: "#b39ddb" },
-  { name: "InvokeModelウォーリア", emoji: "⚡", color: "#ffd54f" },
-  { name: "ツールユースデーモン", emoji: "🛠️", color: "#ef5350" },
-  { name: "JSONスキーマゴブリン", emoji: "📊", color: "#80deea" },
-  { name: "OpenAPIスペクター", emoji: "📖", color: "#b0bec5" },
-  { name: "Lambdaタイムアウトワーム", emoji: "⏰", color: "#ffb74d" },
-  { name: "コールドスタートゴースト", emoji: "🥶", color: "#90caf9" },
-  { name: "コンカレンシーモンスター", emoji: "🐙", color: "#ce93d8" },
-  { name: "トークナイザーゴブリン", emoji: "✂️", color: "#a5d6a7" },
-  { name: "サブワードデーモン", emoji: "🔤", color: "#ef9a9a" },
-  { name: "OOVゾンビ", emoji: "❓", color: "#b39ddb" },
-  { name: "コンテキストウィンドウドラゴン", emoji: "🪟", color: "#4fc3f7" },
-  { name: "200kトークンワイバーン", emoji: "🦢", color: "#80cbc4" },
-  { name: "ナレッジカットオフスライム", emoji: "📅", color: "#ffcc80" },
-  { name: "PoC戦士", emoji: "🧪", color: "#80deea" },
-  { name: "パイロットゴースト", emoji: "✈️", color: "#90caf9" },
-  { name: "フィードバックループデーモン", emoji: "🔁", color: "#f48fb1" },
-  { name: "アノテーターナイト", emoji: "🖊️", color: "#b39ddb" },
-  { name: "ラベルウォーリア", emoji: "🏷️", color: "#66bb6a" },
-  { name: "シンセティックデータゴーレム", emoji: "🧫", color: "#ce93d8" },
-  { name: "オーグメンテーションウィッチ", emoji: "🔮", color: "#b0bec5" },
-  { name: "データポイズニングデーモン", emoji: "☠️", color: "#ef5350" },
-  { name: "アドバーサリアルアタッカー", emoji: "⚔️", color: "#ef9a9a" },
-  { name: "ジェイルブレイクゴースト", emoji: "🔓", color: "#80deea" },
-  { name: "プロンプトインジェクター", emoji: "💉", color: "#ff7043" },
-  { name: "システムプロンプトリーカー", emoji: "🕳️", color: "#bcaaa4" },
-  { name: "コンフィデンシャリティデーモン", emoji: "🤫", color: "#90caf9" },
-  { name: "データソブリンティゴーレム", emoji: "👑", color: "#ffd54f" },
-  { name: "リテンションポリシーウォーリア", emoji: "🗓️", color: "#a5d6a7" },
-  { name: "アクセスコントロールナイト", emoji: "🚪", color: "#4fc3f7" },
-  { name: "監査ログスカウト", emoji: "📋", color: "#80cbc4" },
-  { name: "インシデントレスポンサー", emoji: "🚨", color: "#ef5350" },
-  { name: "脅威モデルウィザード", emoji: "🧙‍♂️", color: "#ce93d8" },
-  { name: "ゼロトラストナイト", emoji: "🛡️", color: "#b39ddb" },
-  { name: "エンクリプションドラゴン", emoji: "🔐", color: "#ffb74d" },
-  { name: "TLSゴースト", emoji: "🌐", color: "#90caf9" },
-  { name: "署名付きURLデーモン", emoji: "📝", color: "#80deea" },
-  { name: "バケットポリシーゴブリン", emoji: "🪣", color: "#f48fb1" },
-  { name: "ブロックパブリックアクセス", emoji: "🚧", color: "#ef9a9a" },
-  { name: "CloudFrontウォーリア", emoji: "⚡", color: "#ffd54f" },
-  { name: "WAFデーモン", emoji: "🔥", color: "#ff7043" },
-  { name: "ShieldゴーレムS", emoji: "🛡️", color: "#4fc3f7" },
-  { name: "GuardDutyスカウト", emoji: "🕵️", color: "#66bb6a" },
-  { name: "SecurityHubウィザード", emoji: "🏰", color: "#ce93d8" },
-  { name: "Macie秘密探偵", emoji: "🔍", color: "#b0bec5" },
-  { name: "Inspectorウォーリア", emoji: "🔬", color: "#80cbc4" },
-  { name: "ConfigルールゴーレムC", emoji: "📐", color: "#a5d6a7" },
-  { name: "TrustedAdvisorフェアリー", emoji: "🧚", color: "#ffcc80" },
-  { name: "コスパモンスター", emoji: "💰", color: "#ffd54f" },
-  { name: "コストエクスプローラー", emoji: "🗺️", color: "#90caf9" },
-  { name: "セービングプランナイト", emoji: "💳", color: "#b39ddb" },
-  { name: "スポットインスタンスハンター", emoji: "🎯", color: "#ef9a9a" },
-  { name: "リザーブドキャパシティ", emoji: "📦", color: "#80deea" },
-  { name: "AutoScalingドラゴン", emoji: "📈", color: "#ff7043" },
-  { name: "ロードバランサーゴーレム", emoji: "⚖️", color: "#4fc3f7" },
-  { name: "ElastiCacheウィッチ", emoji: "⚡", color: "#ce93d8" },
-  { name: "RDSプロキシゴースト", emoji: "🔄", color: "#a5d6a7" },
-  { name: "DynamoDBモンスター", emoji: "⚡", color: "#ffd54f" },
-  { name: "S3インテリジェントティア", emoji: "🧠", color: "#80cbc4" },
-  { name: "GlacierアーカイブゴーレムG", emoji: "🧊", color: "#90caf9" },
-  { name: "EFSウォーリア", emoji: "📁", color: "#ffb74d" },
-  { name: "SQSデーモン", emoji: "📬", color: "#f48fb1" },
-  { name: "SNSスペクター", emoji: "📢", color: "#b39ddb" },
-  { name: "EventBridgeナイト", emoji: "🌉", color: "#4fc3f7" },
-  { name: "KinesisストリームゴーレムK", emoji: "🌊", color: "#80deea" },
-  { name: "GlueETLウィザード", emoji: "🧪", color: "#66bb6a" },
-  { name: "AthenaクエリウィッチA", emoji: "🏺", color: "#ce93d8" },
-  { name: "QuickSightビジョナー", emoji: "👁️", color: "#b0bec5" },
-  { name: "SageMakerサイエンティスト", emoji: "🔬", color: "#90caf9" },
-  { name: "TrainiumチップモンスターT", emoji: "💻", color: "#ffcc80" },
-  { name: "InferentiaアクセラレータI", emoji: "⚡", color: "#ffd54f" },
-  { name: "EC2GPUドラゴン", emoji: "🖥️", color: "#ef5350" },
-  { name: "EKSクラスターゴーレム", emoji: "🎡", color: "#4fc3f7" },
-  { name: "ECSコンテナウォーリア", emoji: "🐳", color: "#80cbc4" },
-  { name: "FargateSeverlessゴースト", emoji: "☁️", color: "#90caf9" },
-  { name: "CodePipelineドラキー", emoji: "🔀", color: "#b39ddb" },
-  { name: "CloudFormationゴーレム", emoji: "📐", color: "#a5d6a7" },
-  { name: "CDKウィザードC", emoji: "🪄", color: "#ce93d8" },
-  { name: "TerraformウォーリアT", emoji: "🏗️", color: "#ffb74d" },
-  { name: "アンサーレレバンスデーモン", emoji: "🎯", color: "#ef9a9a" },
-  { name: "チェーンオブソートドラゴン", emoji: "⛓️", color: "#4fc3f7" },
-  { name: "ゼロショットCoTゴースト", emoji: "🎭", color: "#80deea" },
-  { name: "フューショットウィッチ", emoji: "🎱", color: "#f48fb1" },
-  { name: "セルフコンシステンシー", emoji: "🔁", color: "#b39ddb" },
-  { name: "ロールプロンプティング", emoji: "🎬", color: "#66bb6a" },
-  { name: "ダイレクショナルスティム", emoji: "📍", color: "#90caf9" },
-  { name: "メタプロンプトゴブリン", emoji: "🤔", color: "#bcaaa4" },
-  { name: "ツリーオブソートウィザード", emoji: "🌳", color: "#a5d6a7" },
-  { name: "グラフオブソートデーモン", emoji: "🕸️", color: "#ce93d8" },
-  { name: "アクティブプロンプティング", emoji: "💡", color: "#ffd54f" },
-  { name: "ディレクションスライム", emoji: "🧭", color: "#80cbc4" },
-  { name: "アテンションドラゴン", emoji: "🧠", color: "#ff7043" },
-  { name: "トランスフォーマーウォーリア", emoji: "⚙️", color: "#4fc3f7" },
-  { name: "エンコーダーゴースト", emoji: "📤", color: "#90caf9" },
-  { name: "デコーダーゾンビ", emoji: "📥", color: "#b39ddb" },
-  { name: "ポジショナルエンコーディング", emoji: "📍", color: "#80deea" },
-  { name: "マルチヘッドアテンション", emoji: "🔮", color: "#ce93d8" },
-  { name: "フィードフォワードナイト", emoji: "➡️", color: "#ffb74d" },
-  { name: "レイヤーノームウィッチ", emoji: "🧙‍♀️", color: "#f48fb1" },
-  { name: "ドロップアウトデーモン", emoji: "💧", color: "#ef9a9a" },
-  { name: "ソフトマックスゴーレム", emoji: "📊", color: "#a5d6a7" },
-  { name: "クロスエントロピーゾンビ", emoji: "❌", color: "#ef5350" },
-  { name: "バックプロップデーモン", emoji: "🔙", color: "#b0bec5" },
-  { name: "グラジエントゴースト", emoji: "📉", color: "#90caf9" },
-  { name: "アダムオプティマイザー", emoji: "⚡", color: "#ffd54f" },
-  { name: "ラーニングレートウィッチ", emoji: "📐", color: "#ce93d8" },
-  { name: "エポックモンスター", emoji: "🔄", color: "#80cbc4" },
-  { name: "ミニバッチゴブリン", emoji: "📦", color: "#ffcc80" },
-  { name: "オーバーフィットデーモン", emoji: "🎭", color: "#ef9a9a" },
-  { name: "アンダーフィットゾンビ", emoji: "😴", color: "#b39ddb" },
-  { name: "レギュラライゼーション", emoji: "📏", color: "#4fc3f7" },
-  { name: "バリデーションセットゴースト", emoji: "✔️", color: "#a5d6a7" },
-  { name: "テストセットウィッチ", emoji: "🧪", color: "#f48fb1" },
-  { name: "クロスバリデーション", emoji: "🔀", color: "#66bb6a" },
-  { name: "ハイパーパラメータデーモン", emoji: "🎛️", color: "#ce93d8" },
-  { name: "グリッドサーチゴーレム", emoji: "🗃️", color: "#bcaaa4" },
-  { name: "ランダムサーチウィザード", emoji: "🎲", color: "#90caf9" },
-  { name: "ベイズ最適化ドラゴン", emoji: "🎯", color: "#ff7043" },
-  { name: "ラストボスΩ", emoji: "🐉", color: "#ef5350" },
+  { name: "スライム", emoji: "🟦", color: "#4488ff" },
+  { name: "ドラキー", emoji: "🦇", color: "#8866cc" },
+  { name: "ゴースト", emoji: "👻", color: "#aaaacc" },
+  { name: "メタルスライム", emoji: "🔘", color: "#cccccc" },
+  { name: "キメラ", emoji: "🦅", color: "#cc8844" },
+  { name: "ゴーレム", emoji: "🗿", color: "#887766" },
+  { name: "ドラゴン", emoji: "🐉", color: "#cc4444" },
+  { name: "バブルスライム", emoji: "🟢", color: "#44cc44" },
+  { name: "じゅうおう", emoji: "🐯", color: "#ffaa22" },
+  { name: "デスピサロ", emoji: "💀", color: "#ff2222" },
+  { name: "プロンプトスライム", emoji: "🟦", color: "#4488ff" },
+  { name: "トークンこうもり", emoji: "🦇", color: "#9966cc" },
+  { name: "エンベディングゴースト", emoji: "👻", color: "#aaaadd" },
+  { name: "RAGゾンビ", emoji: "🧟", color: "#66aa66" },
+  { name: "ハルシネーションスライム", emoji: "🫧", color: "#44aacc" },
+  { name: "ファインチューンオーク", emoji: "🪓", color: "#cc9944" },
+  { name: "LoRAリッチ", emoji: "🧬", color: "#cc4488" },
+  { name: "ベクトルウィッチ", emoji: "🧙", color: "#8844cc" },
+  { name: "チャンキングゴブリン", emoji: "🪨", color: "#998877" },
+  { name: "コサインデーモン", emoji: "😈", color: "#cc4444" },
+  { name: "メタルスライムG", emoji: "🔘", color: "#cccccc" },
+  { name: "ガードレールナイト", emoji: "🛡️", color: "#44aaaa" },
+  { name: "プライバシーリンク", emoji: "🔗", color: "#4488cc" },
+  { name: "PIIマスカー", emoji: "🎭", color: "#cc4477" },
+  { name: "クロスリージョンドラゴン", emoji: "🐉", color: "#cc3333" },
+  { name: "バッチベア", emoji: "🐻", color: "#cc9944" },
+  { name: "ストリームスペクター", emoji: "💫", color: "#44cccc" },
+  { name: "コンバースナイト", emoji: "⚔️", color: "#4466cc" },
+  { name: "アクショングループドラゴン", emoji: "🐲", color: "#44aa44" },
+  { name: "ReActウォーリア", emoji: "🗡️", color: "#cc8833" },
+  { name: "トレースデーモン", emoji: "🔍", color: "#9966cc" },
+  { name: "クエリリライタ", emoji: "✏️", color: "#44aaaa" },
+  { name: "ハイブリッドサーチャー", emoji: "🔎", color: "#4488cc" },
+  { name: "リランクゴーレム", emoji: "🗿", color: "#998877" },
+  { name: "セマンティックチャンカー", emoji: "✂️", color: "#cc4477" },
+  { name: "メタデータフィルター", emoji: "🗂️", color: "#8844cc" },
+  { name: "インジェスチョンワーム", emoji: "🪱", color: "#44aa66" },
+  { name: "OpenSearchウルフ", emoji: "🐺", color: "#4488cc" },
+  { name: "pgvectorスネーク", emoji: "🐍", color: "#44aa44" },
+  { name: "マトリョーシカスライム", emoji: "🪆", color: "#9966cc" },
+  { name: "ANNスコーピオン", emoji: "🦂", color: "#cc8833" },
+  { name: "QuantizeキメラQ", emoji: "⚡", color: "#cccc22" },
+  { name: "プルーニングゴースト", emoji: "✂️", color: "#aaaaaa" },
+  { name: "蒸留デーモン", emoji: "🧪", color: "#44aacc" },
+  { name: "ROUGEワイバーン", emoji: "🦅", color: "#cc3333" },
+  { name: "BLEUドラキー", emoji: "💙", color: "#4488cc" },
+  { name: "パープレキシティゴースト", emoji: "🌀", color: "#9966cc" },
+  { name: "フェイスフルネスドラゴン", emoji: "🔥", color: "#cc5533" },
+  { name: "コンテキストプレシジョン", emoji: "🎯", color: "#44aa44" },
+  { name: "コンテキストリコール", emoji: "📡", color: "#4488cc" },
+  { name: "RLHFウォーリア", emoji: "🤺", color: "#cc8833" },
+  { name: "DPOナイト", emoji: "🏇", color: "#8844cc" },
+  { name: "LLMジャッジ", emoji: "⚖️", color: "#4488cc" },
+  { name: "グラウンドトゥルースゴースト", emoji: "👁️", color: "#44aacc" },
+  { name: "ロバストネスワーム", emoji: "🛡️", color: "#44aa66" },
+  { name: "バイアスデーモン", emoji: "😤", color: "#cc4444" },
+  { name: "トキシシティスライム", emoji: "☠️", color: "#cc5533" },
+  { name: "クラリファイサー", emoji: "🔭", color: "#44aaaa" },
+  { name: "SHAPウィザード", emoji: "🧙", color: "#9966cc" },
+  { name: "ベンチマークドラゴン", emoji: "📊", color: "#cc8833" },
+  { name: "プロビジョンドスループット", emoji: "🏭", color: "#998877" },
+  { name: "バッチジョブゴーレム", emoji: "🤖", color: "#aaaaaa" },
+  { name: "ストレージコストモンスター", emoji: "💾", color: "#4488cc" },
+  { name: "マックストークンデーモン", emoji: "🔢", color: "#cc4477" },
+  { name: "テンパラチャーウィッチ", emoji: "🌡️", color: "#9966cc" },
+  { name: "TopPスペクター", emoji: "🎲", color: "#44aacc" },
+  { name: "TopKゴブリン", emoji: "🎰", color: "#cc9944" },
+  { name: "ストップシーケンスゾンビ", emoji: "🛑", color: "#cc4444" },
+  { name: "フリークエンシーペナルティ", emoji: "🔄", color: "#4488cc" },
+  { name: "プレゼンスペナルティ", emoji: "👋", color: "#44aa66" },
+  { name: "マルチモーダルドラゴン", emoji: "🦄", color: "#9966cc" },
+  { name: "ビジョンワイバーン", emoji: "👀", color: "#4488cc" },
+  { name: "Base64エンコーダー", emoji: "🔐", color: "#44aaaa" },
+  { name: "アウトペイントスライム", emoji: "🎨", color: "#cc8833" },
+  { name: "インペイントゴースト", emoji: "🖌️", color: "#cc4477" },
+  { name: "ネガティブプロンプター", emoji: "🚫", color: "#cc3333" },
+  { name: "スタイルトランスファー", emoji: "🎭", color: "#8844cc" },
+  { name: "ウォーターマークゴーレム", emoji: "💧", color: "#4488cc" },
+  { name: "デジタル透かしデーモン", emoji: "🔏", color: "#44aacc" },
+  { name: "KMSキーウォーリア", emoji: "🗝️", color: "#cccc22" },
+  { name: "PrivateLinkナイト", emoji: "🔗", color: "#4488cc" },
+  { name: "VPCエンドポイントゴースト", emoji: "🌐", color: "#44aa66" },
+  { name: "CloudTrailスカウト", emoji: "🕵️", color: "#998877" },
+  { name: "IAMポリシーウォーリア", emoji: "📋", color: "#cc8833" },
+  { name: "最小権限デーモン", emoji: "🔒", color: "#cc4444" },
+  { name: "責任共有ドラゴン", emoji: "🤝", color: "#44aa44" },
+  { name: "コンプライアンスゴーレム", emoji: "📜", color: "#9966cc" },
+  { name: "HIPAAウォーリア", emoji: "🏥", color: "#4488cc" },
+  { name: "GDPRデーモン", emoji: "🌍", color: "#4488cc" },
+  { name: "モデルインボケーションロガー", emoji: "📝", color: "#44aaaa" },
+  { name: "デリミタゴブリン", emoji: "🪣", color: "#cc9944" },
+  { name: "サニタイズウィッチ", emoji: "🧹", color: "#cc4477" },
+  { name: "HITLナイト", emoji: "🧑", color: "#8844cc" },
+  { name: "コンテキストグラウンディング", emoji: "⚓", color: "#44aacc" },
+  { name: "デナイドトピックデーモン", emoji: "🚷", color: "#cc3333" },
+  { name: "ワードフィルターゾンビ", emoji: "🚫", color: "#cc4444" },
+  { name: "センシティブインフォゴースト", emoji: "🔕", color: "#aaaaaa" },
+  { name: "コンテントフィルタードラゴン", emoji: "🛡️", color: "#cc5533" },
+  { name: "エージェントエイリアス", emoji: "🎭", color: "#9966cc" },
+  { name: "バージョンコントローラー", emoji: "📦", color: "#4488cc" },
+  { name: "ユーザーコンファメーション", emoji: "✅", color: "#44aa44" },
+  { name: "セッションDynamoゴースト", emoji: "💬", color: "#44aacc" },
+  { name: "ステップファンクションナイト", emoji: "🔀", color: "#4488cc" },
+  { name: "EventStreamスペクター", emoji: "📡", color: "#8844cc" },
+  { name: "スロットリングデーモン", emoji: "⏱️", color: "#cc4444" },
+  { name: "エクスポネンシャルバックオフ", emoji: "📈", color: "#44aa66" },
+  { name: "マルチリージョンドラゴン", emoji: "🌍", color: "#9966cc" },
+  { name: "クロスリージョンスライム", emoji: "🌏", color: "#4488cc" },
+  { name: "カスタムRAGウォーリア", emoji: "⚗️", color: "#44aaaa" },
+  { name: "フルマネージドRAG", emoji: "🤖", color: "#cc9944" },
+  { name: "Citationゴースト", emoji: "📎", color: "#cc4477" },
+  { name: "リトリーブアンドジェネレート", emoji: "🎣", color: "#4488cc" },
+  { name: "コンバートAPIナイト", emoji: "🔄", color: "#8844cc" },
+  { name: "InvokeModelウォーリア", emoji: "⚡", color: "#cccc22" },
+  { name: "ツールユースデーモン", emoji: "🛠️", color: "#cc3333" },
+  { name: "JSONスキーマゴブリン", emoji: "📊", color: "#44aacc" },
+  { name: "OpenAPIスペクター", emoji: "📖", color: "#aaaaaa" },
+  { name: "Lambdaタイムアウトワーム", emoji: "⏰", color: "#cc8833" },
+  { name: "コールドスタートゴースト", emoji: "🥶", color: "#4488cc" },
+  { name: "コンカレンシーモンスター", emoji: "🐙", color: "#9966cc" },
+  { name: "トークナイザーゴブリン", emoji: "✂️", color: "#44aa66" },
+  { name: "サブワードデーモン", emoji: "🔤", color: "#cc4444" },
+  { name: "OOVゾンビ", emoji: "❓", color: "#8844cc" },
+  { name: "コンテキストウィンドウドラゴン", emoji: "🪟", color: "#4488cc" },
+  { name: "200kトークンワイバーン", emoji: "🦢", color: "#44aaaa" },
+  { name: "ナレッジカットオフスライム", emoji: "📅", color: "#cc9944" },
+  { name: "PoC戦士", emoji: "🧪", color: "#44aacc" },
+  { name: "パイロットゴースト", emoji: "✈️", color: "#4488cc" },
+  { name: "フィードバックループデーモン", emoji: "🔁", color: "#cc4477" },
+  { name: "アノテーターナイト", emoji: "🖊️", color: "#8844cc" },
+  { name: "ラベルウォーリア", emoji: "🏷️", color: "#44aa44" },
+  { name: "シンセティックデータゴーレム", emoji: "🧫", color: "#9966cc" },
+  { name: "オーグメンテーションウィッチ", emoji: "🔮", color: "#aaaaaa" },
+  { name: "データポイズニングデーモン", emoji: "☠️", color: "#cc3333" },
+  { name: "アドバーサリアルアタッカー", emoji: "⚔️", color: "#cc4444" },
+  { name: "ジェイルブレイクゴースト", emoji: "🔓", color: "#44aacc" },
+  { name: "プロンプトインジェクター", emoji: "💉", color: "#cc5533" },
+  { name: "システムプロンプトリーカー", emoji: "🕳️", color: "#998877" },
+  { name: "コンフィデンシャリティデーモン", emoji: "🤫", color: "#4488cc" },
+  { name: "データソブリンティゴーレム", emoji: "👑", color: "#cccc22" },
+  { name: "リテンションポリシーウォーリア", emoji: "🗓️", color: "#44aa66" },
+  { name: "アクセスコントロールナイト", emoji: "🚪", color: "#4488cc" },
+  { name: "監査ログスカウト", emoji: "📋", color: "#44aaaa" },
+  { name: "インシデントレスポンサー", emoji: "🚨", color: "#cc3333" },
+  { name: "脅威モデルウィザード", emoji: "🧙", color: "#9966cc" },
+  { name: "ゼロトラストナイト", emoji: "🛡️", color: "#8844cc" },
+  { name: "エンクリプションドラゴン", emoji: "🔐", color: "#cc8833" },
+  { name: "TLSゴースト", emoji: "🌐", color: "#4488cc" },
+  { name: "署名付きURLデーモン", emoji: "📝", color: "#44aacc" },
+  { name: "バケットポリシーゴブリン", emoji: "🪣", color: "#cc4477" },
+  { name: "ブロックパブリックアクセス", emoji: "🚧", color: "#cc4444" },
+  { name: "CloudFrontウォーリア", emoji: "⚡", color: "#cccc22" },
+  { name: "WAFデーモン", emoji: "🔥", color: "#cc5533" },
+  { name: "ShieldゴーレムS", emoji: "🛡️", color: "#4488cc" },
+  { name: "GuardDutyスカウト", emoji: "🕵️", color: "#44aa44" },
+  { name: "SecurityHubウィザード", emoji: "🏰", color: "#9966cc" },
+  { name: "Macie秘密探偵", emoji: "🔍", color: "#aaaaaa" },
+  { name: "Inspectorウォーリア", emoji: "🔬", color: "#44aaaa" },
+  { name: "ConfigルールゴーレムC", emoji: "📐", color: "#44aa66" },
+  { name: "TrustedAdvisorフェアリー", emoji: "🧚", color: "#cc9944" },
+  { name: "コスパモンスター", emoji: "💰", color: "#cccc22" },
+  { name: "コストエクスプローラー", emoji: "🗺️", color: "#4488cc" },
+  { name: "セービングプランナイト", emoji: "💳", color: "#8844cc" },
+  { name: "スポットインスタンスハンター", emoji: "🎯", color: "#cc4444" },
+  { name: "リザーブドキャパシティ", emoji: "📦", color: "#44aacc" },
+  { name: "AutoScalingドラゴン", emoji: "📈", color: "#cc5533" },
+  { name: "ロードバランサーゴーレム", emoji: "⚖️", color: "#4488cc" },
+  { name: "ElastiCacheウィッチ", emoji: "⚡", color: "#9966cc" },
+  { name: "RDSプロキシゴースト", emoji: "🔄", color: "#44aa66" },
+  { name: "DynamoDBモンスター", emoji: "⚡", color: "#cccc22" },
+  { name: "S3インテリジェントティア", emoji: "🧠", color: "#44aaaa" },
+  { name: "GlacierゴーレムG", emoji: "🧊", color: "#4488cc" },
+  { name: "EFSウォーリア", emoji: "📁", color: "#cc8833" },
+  { name: "SQSデーモン", emoji: "📬", color: "#cc4477" },
+  { name: "SNSスペクター", emoji: "📢", color: "#8844cc" },
+  { name: "EventBridgeナイト", emoji: "🌉", color: "#4488cc" },
+  { name: "KinesisゴーレムK", emoji: "🌊", color: "#44aacc" },
+  { name: "GlueETLウィザード", emoji: "🧪", color: "#44aa44" },
+  { name: "AthenaウィッチA", emoji: "🏺", color: "#9966cc" },
+  { name: "QuickSightビジョナー", emoji: "👁️", color: "#aaaaaa" },
+  { name: "SageMakerサイエンティスト", emoji: "🔬", color: "#4488cc" },
+  { name: "TrainiumチップモンスターT", emoji: "💻", color: "#cc9944" },
+  { name: "InferentiaアクセラレータI", emoji: "⚡", color: "#cccc22" },
+  { name: "EC2GPUドラゴン", emoji: "🖥️", color: "#cc3333" },
+  { name: "EKSクラスターゴーレム", emoji: "🎡", color: "#4488cc" },
+  { name: "ECSコンテナウォーリア", emoji: "🐳", color: "#44aaaa" },
+  { name: "FargateゴーストF", emoji: "☁️", color: "#4488cc" },
+  { name: "CodePipelineドラキー", emoji: "🔀", color: "#8844cc" },
+  { name: "CloudFormationゴーレム", emoji: "📐", color: "#44aa66" },
+  { name: "CDKウィザードC", emoji: "🪄", color: "#9966cc" },
+  { name: "TerraformウォーリアT", emoji: "🏗️", color: "#cc8833" },
+  { name: "アンサーレレバンスデーモン", emoji: "🎯", color: "#cc4444" },
+  { name: "チェーンオブソートドラゴン", emoji: "⛓️", color: "#4488cc" },
+  { name: "ゼロショットCoTゴースト", emoji: "🎭", color: "#44aacc" },
+  { name: "フューショットウィッチ", emoji: "🎱", color: "#cc4477" },
+  { name: "セルフコンシステンシー", emoji: "🔁", color: "#8844cc" },
+  { name: "ロールプロンプティング", emoji: "🎬", color: "#44aa44" },
+  { name: "ダイレクショナルスティム", emoji: "📍", color: "#4488cc" },
+  { name: "メタプロンプトゴブリン", emoji: "🤔", color: "#998877" },
+  { name: "ツリーオブソートウィザード", emoji: "🌳", color: "#44aa66" },
+  { name: "グラフオブソートデーモン", emoji: "🕸️", color: "#9966cc" },
+  { name: "アクティブプロンプティング", emoji: "💡", color: "#cccc22" },
+  { name: "アテンションドラゴン", emoji: "🧠", color: "#cc5533" },
+  { name: "トランスフォーマーウォーリア", emoji: "⚙️", color: "#4488cc" },
+  { name: "エンコーダーゴースト", emoji: "📤", color: "#4488cc" },
+  { name: "デコーダーゾンビ", emoji: "📥", color: "#8844cc" },
+  { name: "マルチヘッドアテンション", emoji: "🔮", color: "#9966cc" },
+  { name: "バックプロップデーモン", emoji: "🔙", color: "#aaaaaa" },
+  { name: "オーバーフィットデーモン", emoji: "🎭", color: "#cc4444" },
+  { name: "ハイパーパラメータデーモン", emoji: "🎛️", color: "#9966cc" },
+  { name: "ラストボスΩ", emoji: "🐉", color: "#ff2222" },
 ];
 
-const PARTY = [
-  { name: "ゆうしゃ", short: "ゆ", maxHp: 80, maxMp: 30 },
-  { name: "まほうつかい", short: "ま", maxHp: 55, maxMp: 80 },
-  { name: "そうりょ", short: "そ", maxHp: 65, maxMp: 60 },
-];
-
+const MAX_HP = 50;
 const delay = ms => new Promise(r => setTimeout(r, ms));
-const cleanChoice = (str) => str.replace(/^[A-D]\.\s*/, "");
+const clean = (s) => s.replace(/^[A-D]\.\s*/, "");
 
-export default function DQ4Quiz() {
-  const [screen, setScreen] = useState("title");
+export default function FCQuiz() {
+  const [screen, setScreen] = useState("title"); // title, battle
   const [qIndex, setQIndex] = useState(0);
   const [filteredQ, setFilteredQ] = useState(QUESTIONS);
   const [phase, setPhase] = useState("command"); // command, question, animating, result, gameover, clear
-  const [party, setParty] = useState(PARTY.map(p => ({ ...p, hp: p.maxHp, mp: p.maxMp })));
+  const [hp, setHp] = useState(MAX_HP);
   const [monsterHp, setMonsterHp] = useState(30);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [answered, setAnswered] = useState(false);
-  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
   const [showExplanation, setShowExplanation] = useState(false);
-  const [scores, setScores] = useState({ correct: 0, wrong: 0 });
+  const [correct, setCorrect] = useState(0);
   const [shakeMonster, setShakeMonster] = useState(false);
-  const [flashParty, setFlashParty] = useState(null);
+  const [shakePlayer, setShakePlayer] = useState(false);
+  const [blink, setBlink] = useState(true);
   const [cursor, setCursor] = useState(0);
 
   const q = filteredQ[Math.min(qIndex, filteredQ.length - 1)];
   const monster = MONSTERS[Math.min(qIndex, MONSTERS.length - 1)];
-  const monsterMaxHp = 30;
-  const activeChar = PARTY[qIndex % 3];
+  const monsterMax = 30;
+
+  useEffect(() => {
+    const iv = setInterval(() => setBlink(b => !b), 500);
+    return () => clearInterval(iv);
+  }, []);
 
   const startGame = (mode) => {
-    const qs = mode === "random" ? [...QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 20) : QUESTIONS;
+    const qs = mode === "random"
+      ? [...QUESTIONS].sort(() => Math.random() - 0.5).slice(0, 20)
+      : QUESTIONS;
     setFilteredQ(qs);
     setQIndex(0);
-    setParty(PARTY.map(p => ({ ...p, hp: p.maxHp, mp: p.maxMp })));
+    setHp(MAX_HP);
     setMonsterHp(30);
     setSelectedAnswer(null);
     setAnswered(false);
     setShowExplanation(false);
-    setScores({ correct: 0, wrong: 0 });
-    setMessage(`${monster?.name}があらわれた！`);
+    setCorrect(0);
     setPhase("command");
-    setScreen("battle");
     setCursor(0);
+    setMessages([
+      `${MONSTERS[0].name}が あらわれた！`,
+    ]);
+    setScreen("battle");
   };
 
-  const handleCommand = (cmd) => {
-    if (cmd === "たたかう") {
-      setMessage("もんだいがでた！\n" + q.question);
+  const CMDS = ["たたかう", "じゅもん", "どうぐ", "にげる"];
+
+  const handleCmd = (i) => {
+    setCursor(i);
+    if (i === 0) {
+      setMessages([q.question]);
       setPhase("question");
       setCursor(0);
-    } else if (cmd === "にげる") {
-      setMessage("しかし　まわりこまれた！");
+    } else if (i === 3) {
+      setMessages(["しかし まわりこまれた！"]);
+    } else {
+      setMessages(["いまは つかえない！"]);
     }
   };
 
@@ -287,40 +285,48 @@ export default function DQ4Quiz() {
     setSelectedAnswer(idx);
     setAnswered(true);
     setPhase("animating");
-    const correct = idx === q.answer;
+    const isCorrect = idx === q.answer;
 
-    if (correct) {
+    if (isCorrect) {
       const dmg = Math.floor(Math.random() * 8) + 8;
       setShakeMonster(true);
-      await delay(200);
-      setShakeMonster(false);
+      await delay(200); setShakeMonster(false);
       const newMHp = Math.max(0, monsterHp - dmg);
       setMonsterHp(newMHp);
-      setScores(s => ({ ...s, correct: s.correct + 1 }));
-      setMessage(`せいかい！\n${activeChar.name}のこうげき！\n${monster?.name}に　${dmg}ポイントのダメージ！`);
-      await delay(1000);
+      setCorrect(c => c + 1);
       if (newMHp <= 0) {
-        setMessage(`${monster?.name}をたおした！\nけいけんちをかくとく！`);
-        await delay(800);
+        setMessages([
+          `ゆうしゃの こうげき！`,
+          `${monster.name}に ${dmg}ポイントの ダメージ！`,
+          `${monster.name}を たおした！`,
+          `けいけんちを かくとく！`,
+        ]);
+      } else {
+        setMessages([
+          `ゆうしゃの こうげき！`,
+          `${monster.name}に ${dmg}ポイントの ダメージ！`,
+        ]);
       }
     } else {
       const pDmg = Math.floor(Math.random() * 6) + 4;
-      const charIdx = qIndex % 3;
-      setFlashParty(charIdx);
-      setParty(prev => prev.map((p, i) => i === charIdx ? { ...p, hp: Math.max(0, p.hp - pDmg) } : p));
-      setMessage(`まちがい！\n${monster?.name}のはんげき！\n${activeChar.name}は　${pDmg}ポイントのダメージ！`);
-      setScores(s => ({ ...s, wrong: s.wrong + 1 }));
-      await delay(400);
-      setFlashParty(null);
-      await delay(600);
-
-      if (party[charIdx].hp - pDmg <= 0) {
-        setMessage(`${activeChar.name}は　たおれた…\nゲームオーバー`);
+      const newHp = Math.max(0, hp - pDmg);
+      setHp(newHp);
+      setShakePlayer(true);
+      await delay(200); setShakePlayer(false);
+      setMessages([
+        `まちがい！`,
+        `${monster.name}の こうげき！`,
+        `ゆうしゃは ${pDmg}ポイントの ダメージ！`,
+      ]);
+      if (newHp <= 0) {
+        await delay(800);
+        setMessages(["ゆうしゃは しにました。", "ゲームオーバー…"]);
         setPhase("gameover");
         return;
       }
     }
 
+    await delay(300);
     setShowExplanation(true);
     setPhase("result");
   };
@@ -328,249 +334,280 @@ export default function DQ4Quiz() {
   const handleNext = () => {
     const next = qIndex + 1;
     if (next >= filteredQ.length) {
+      setMessages([
+        `すべての てきを たおした！`,
+        `ゆうしゃは まおうを たおした！`,
+        `せいかい ${correct + 1} / ${filteredQ.length} もん`,
+      ]);
       setPhase("clear");
       return;
     }
-    const nextMonster = MONSTERS[Math.min(next, MONSTERS.length - 1)];
+    const nm = MONSTERS[Math.min(next, MONSTERS.length - 1)];
     setQIndex(next);
     setMonsterHp(30);
     setSelectedAnswer(null);
     setAnswered(false);
     setShowExplanation(false);
-    setMessage(`${nextMonster?.name}があらわれた！`);
+    setMessages([`${nm.name}が あらわれた！`]);
     setPhase("command");
     setCursor(0);
   };
 
-  const COMMANDS = ["たたかう", "さくせん", "どうぐ", "にげる"];
-
-  // ===== TITLE =====
   if (screen === "title") {
     return (
       <div style={{
-        background: "#000", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        fontFamily: "'DotGothic16', monospace", flexDirection: "column", gap: 24,
+        background: "#000", minHeight: "100vh",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        fontFamily: "'Press Start 2P', monospace",
+        gap: 32, padding: 16,
       }}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');`}</style>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');`}</style>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 10, color: "#888", letterSpacing: 3, marginBottom: 8 }}>AWS Certified Generative AI Developer Professional</div>
-          <div style={{ fontSize: 24, color: "#fff", marginBottom: 4 }}>もぎしけん　ドラゴンクエスト</div>
-          <div style={{ fontSize: 11, color: "#888" }}>全{QUESTIONS.length}問　モンスター200種類</div>
+          <div style={{ fontSize: 8, color: "#888", marginBottom: 16, lineHeight: 2 }}>
+            AWS CERTIFIED<br />GENERATIVE AI DEVELOPER
+          </div>
+          <div style={{ fontSize: 14, color: "#fff", marginBottom: 8 }}>
+            DRAGON QUEST
+          </div>
+          <div style={{ fontSize: 11, color: "#ffff00" }}>
+            MOCK EXAM
+          </div>
         </div>
-        <div style={{ border: "2px solid #fff", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10, minWidth: 200 }}>
-          {[
-            { label: `▶ ぜんもんにちょうせん（${QUESTIONS.length}もん）`, mode: "all" },
-            { label: "　ランダム20もん", mode: "random" },
-          ].map(({ label, mode }) => (
-            <button key={mode} onClick={() => startGame(mode)} style={{
-              background: "transparent", border: "none", color: "#fff",
-              fontFamily: "'DotGothic16', monospace", fontSize: 14,
-              cursor: "pointer", textAlign: "left", padding: "4px 0",
-            }}>{label}</button>
-          ))}
+
+        <div style={{ border: "3px solid #fff", padding: "20px 28px", display: "flex", flexDirection: "column", gap: 14 }}>
+          <div onClick={() => startGame("all")} style={{ fontSize: 9, color: "#fff", cursor: "pointer", display: "flex", gap: 8 }}>
+            <span style={{ color: blink ? "#ffff00" : "#000" }}>►</span>
+            <span>ALL {QUESTIONS.length} QUESTS</span>
+          </div>
+          <div onClick={() => startGame("random")} style={{ fontSize: 9, color: "#aaa", cursor: "pointer", display: "flex", gap: 8 }}>
+            <span>　</span>
+            <span>RANDOM 20 QUESTS</span>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 7, color: "#444", textAlign: "center", lineHeight: 2 }}>
+          200 MONSTERS AWAIT
         </div>
       </div>
     );
   }
 
-  // ===== BATTLE =====
   return (
     <div style={{
-      background: "#000", minHeight: "100vh",
-      fontFamily: "'DotGothic16', monospace",
-      display: "flex", flexDirection: "column",
-      maxWidth: 480, margin: "0 auto",
-      border: "2px solid #444",
+      background: "#000",
+      minHeight: "100vh",
+      fontFamily: "'Press Start 2P', monospace",
+      display: "flex",
+      flexDirection: "column",
+      maxWidth: 480,
+      margin: "0 auto",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
-        @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
-        @keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 60%{transform:translateX(8px)} }
+        @keyframes shakePl { 0%,100%{transform:translateX(0)} 20%{transform:translateX(6px)} 60%{transform:translateX(-6px)} }
       `}</style>
 
-      {/* ── パーティステータス（上部） ── */}
-      <div style={{ border: "2px solid #fff", margin: 6, padding: "6px 8px" }}>
-        <div style={{ display: "flex", gap: 0 }}>
-          {party.map((p, i) => (
-            <div key={i} style={{
-              flex: 1, borderRight: i < 2 ? "1px solid #555" : "none",
-              padding: "0 6px", opacity: p.hp <= 0 ? 0.4 : 1,
-              animation: flashParty === i ? "flash 0.4s ease" : "none",
-            }}>
-              <div style={{ fontSize: 10, color: "#fff", marginBottom: 2 }}>{p.name}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 1 }}>
-                <span style={{ fontSize: 9, color: "#aaa", width: 12 }}>H</span>
-                <div style={{ flex: 1, height: 4, background: "#222", borderRadius: 0 }}>
-                  <div style={{
-                    height: "100%", width: `${Math.max(0, p.hp / p.maxHp * 100)}%`,
-                    background: p.hp / p.maxHp > 0.5 ? "#0f0" : p.hp / p.maxHp > 0.25 ? "#ff0" : "#f00",
-                    transition: "width 0.4s",
-                  }} />
-                </div>
-                <span style={{ fontSize: 9, color: "#fff", width: 20, textAlign: "right" }}>{p.hp}</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 9, color: "#aaa", width: 12 }}>M</span>
-                <div style={{ flex: 1, height: 4, background: "#222", borderRadius: 0 }}>
-                  <div style={{ height: "100%", width: `${p.mp / p.maxMp * 100}%`, background: "#44f" }} />
-                </div>
-                <span style={{ fontSize: 9, color: "#fff", width: 20, textAlign: "right" }}>{p.mp}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* ── バトルフィールド（モンスター） ── */}
+      {/* ── バトルフィールド ── */}
       <div style={{
-        flex: 1, background: "#111", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", minHeight: 160, position: "relative",
-        borderTop: "1px solid #333", borderBottom: "1px solid #333",
+        background: "#000", height: 200, position: "relative",
+        borderBottom: "3px solid #fff",
+        display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        {/* 進捗 */}
-        <div style={{ position: "absolute", top: 6, right: 8, fontSize: 9, color: "#666" }}>
-          {qIndex + 1} / {filteredQ.length}
-        </div>
-        <div style={{ position: "absolute", top: 6, left: 8, fontSize: 9, color: "#666" }}>
-          ○{scores.correct} ✗{scores.wrong}
-        </div>
-
-        {/* モンスター */}
-        <div style={{ textAlign: "center", animation: shakeMonster ? "shake 0.3s ease" : "none" }}>
-          <div style={{ fontSize: 10, color: monster?.color || "#fff", marginBottom: 4 }}>
+        {/* モンスター（右上） */}
+        <div style={{
+          position: "absolute", top: 20, right: 40,
+          textAlign: "center",
+          animation: shakeMonster ? "shake 0.3s ease" : "none",
+        }}>
+          <div style={{ fontSize: 11, color: monster?.color || "#fff", marginBottom: 6, letterSpacing: 1 }}>
             {monster?.name}
           </div>
-          <div style={{ fontSize: 72, lineHeight: 1, filter: `drop-shadow(0 0 8px ${monster?.color || "#fff"})` }}>
-            {monster?.emoji}
-          </div>
-
-          {/* モンスターHP */}
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8, justifyContent: "center" }}>
-            <span style={{ fontSize: 9, color: "#aaa" }}>HP</span>
-            <div style={{ width: 100, height: 5, background: "#222" }}>
+          <div style={{ fontSize: 64, lineHeight: 1 }}>{monster?.emoji}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 6 }}>
+            <span style={{ fontSize: 7, color: "#aaa" }}>HP</span>
+            <div style={{ width: 60, height: 4, background: "#222", border: "1px solid #444" }}>
               <div style={{
                 height: "100%",
-                width: `${monsterHp / monsterMaxHp * 100}%`,
-                background: monsterHp / monsterMaxHp > 0.5 ? "#0f0" : monsterHp / monsterMaxHp > 0.25 ? "#ff0" : "#f00",
-                transition: "width 0.4s",
+                width: `${monsterHp / monsterMax * 100}%`,
+                background: monsterHp / monsterMax > 0.5 ? "#0f0" : monsterHp / monsterMax > 0.2 ? "#ff0" : "#f00",
+                transition: "width 0.3s",
               }} />
             </div>
-            <span style={{ fontSize: 9, color: "#fff" }}>{monsterHp}</span>
           </div>
         </div>
 
-        {/* アクティブキャラ表示 */}
-        <div style={{ position: "absolute", bottom: 8, right: 8, fontSize: 9, color: "#ffff00" }}>
-          {activeChar.name}のばんだ
+        {/* プレイヤー（左下） */}
+        <div style={{
+          position: "absolute", bottom: 16, left: 20,
+          animation: shakePlayer ? "shakePl 0.3s ease" : "none",
+        }}>
+          <div style={{ fontSize: 7, color: "#ffff00", marginBottom: 4 }}>ゆうしゃ</div>
+          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+            <span style={{ fontSize: 7, color: "#f88" }}>HP</span>
+            <div style={{ width: 80, height: 5, background: "#111", border: "1px solid #444" }}>
+              <div style={{
+                height: "100%",
+                width: `${hp / MAX_HP * 100}%`,
+                background: hp / MAX_HP > 0.5 ? "#0f0" : hp / MAX_HP > 0.25 ? "#ff0" : "#f00",
+                transition: "width 0.3s",
+              }} />
+            </div>
+            <span style={{ fontSize: 7, color: "#fff" }}>{hp}/{MAX_HP}</span>
+          </div>
+          <div style={{ fontSize: 7, color: "#666", marginTop: 4 }}>
+            {qIndex + 1}/{filteredQ.length} ○{correct}
+          </div>
         </div>
+
+        {/* 地面 */}
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          height: 3, background: "#fff",
+        }} />
       </div>
 
       {/* ── メッセージウィンドウ ── */}
       <div style={{
-        border: "2px solid #fff", margin: "4px 6px",
-        padding: "8px 10px", minHeight: 70, background: "#000",
+        border: "3px solid #fff", margin: 8,
+        padding: "10px 12px", background: "#000", minHeight: 90,
       }}>
-        <div style={{ fontSize: 12, color: "#fff", lineHeight: 1.8, whiteSpace: "pre-line" }}>
-          {message}
-        </div>
+        {messages.map((m, i) => (
+          <div key={i} style={{
+            fontSize: 9, color: "#fff", lineHeight: 2.2,
+            wordBreak: "break-all",
+          }}>{m}</div>
+        ))}
+        {(phase === "command" || phase === "result") && (
+          <span style={{ fontSize: 10, color: blink ? "#fff" : "#000" }}>▼</span>
+        )}
       </div>
 
       {/* ── 解説 ── */}
       {showExplanation && q?.explanation && (
         <div style={{
-          border: "1px solid #555", margin: "0 6px 4px",
-          padding: "6px 10px", background: "#001100",
+          border: "2px solid #0f0", margin: "0 8px 6px",
+          padding: "8px 12px", background: "#001100",
         }}>
-          <div style={{ fontSize: 10, color: "#0f0", lineHeight: 1.7 }}>
-            💡 {q.explanation}
+          <div style={{ fontSize: 7, color: "#0f0", lineHeight: 2.2, wordBreak: "break-all" }}>
+            {q.explanation}
           </div>
         </div>
       )}
 
-      {/* ── コマンド / 選択肢ウィンドウ ── */}
-      <div style={{ display: "flex", gap: 0, margin: "0 6px 6px" }}>
+      {/* ── 問題文 ── */}
+      {phase === "question" && q && (
+        <div style={{
+          border: "2px solid #888", margin: "0 8px 6px",
+          padding: "8px 12px", background: "#000",
+        }}>
+          <div style={{ fontSize: 8, color: "#ffff00", lineHeight: 2.2, wordBreak: "break-all" }}>
+            {q.question}
+          </div>
+        </div>
+      )}
 
-        {/* 左：コマンド */}
-        <div style={{ border: "2px solid #fff", padding: "8px 12px", minWidth: 100, background: "#000" }}>
-          {phase === "command" && COMMANDS.map((cmd, i) => (
-            <div key={cmd} onClick={() => { setCursor(i); handleCommand(cmd); }} style={{
-              fontSize: 12, color: cursor === i ? "#ffff00" : "#fff",
-              padding: "2px 0", cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+      {/* ── コマンド / 選択肢 ── */}
+      <div style={{ display: "flex", margin: "0 8px 8px", gap: 0 }}>
+
+        {/* コマンドウィンドウ */}
+        <div style={{
+          border: "3px solid #fff", padding: "10px 14px",
+          background: "#000", minWidth: 110,
+        }}>
+          {phase === "command" && CMDS.map((cmd, i) => (
+            <div key={cmd} onClick={() => handleCmd(i)} style={{
+              fontSize: 9, color: cursor === i ? "#ffff00" : "#fff",
+              padding: "4px 0", cursor: "pointer",
+              display: "flex", alignItems: "center", gap: 6,
             }}>
-              {cursor === i ? "▶" : "　"}{cmd}
+              <span style={{ color: cursor === i ? "#ffff00" : "#000", fontSize: 9 }}>
+                {cursor === i ? "►" : "　"}
+              </span>
+              {cmd}
             </div>
           ))}
           {phase === "question" && (
-            <div style={{ fontSize: 10, color: "#888" }}>
+            <div style={{ fontSize: 8, color: "#888", lineHeight: 2 }}>
               こたえを<br />えらべ
             </div>
           )}
           {phase === "result" && (
-            <div onClick={handleNext} style={{
-              fontSize: 12, color: "#ffff00", cursor: "pointer", lineHeight: 1.8,
-            }}>▶ つぎへ</div>
+            <div onClick={handleNext} style={{ fontSize: 8, color: "#ffff00", cursor: "pointer", lineHeight: 2 }}>
+              ► つぎへ
+            </div>
           )}
           {phase === "animating" && (
-            <div style={{ fontSize: 11, color: "#888" }}>・・・</div>
+            <div style={{ fontSize: 8, color: "#444" }}>・・・</div>
           )}
           {phase === "gameover" && (
-            <div onClick={() => setScreen("title")} style={{
-              fontSize: 11, color: "#f88", cursor: "pointer", lineHeight: 1.8,
-            }}>▶ タイトルへ</div>
+            <div onClick={() => setScreen("title")} style={{ fontSize: 7, color: "#f88", cursor: "pointer", lineHeight: 2.2 }}>
+              ► TITLE<br />　 BACK
+            </div>
           )}
           {phase === "clear" && (
-            <div onClick={() => setScreen("title")} style={{
-              fontSize: 11, color: "#ff0", cursor: "pointer", lineHeight: 1.8,
-            }}>▶ タイトルへ</div>
+            <div onClick={() => setScreen("title")} style={{ fontSize: 7, color: "#ffff00", cursor: "pointer", lineHeight: 2.2 }}>
+              ► TITLE<br />　 BACK
+            </div>
           )}
         </div>
 
-        {/* 右：選択肢 or 作戦 */}
-        <div style={{ flex: 1, border: "2px solid #fff", borderLeft: "none", padding: "6px 10px", background: "#000" }}>
+        {/* 選択肢ウィンドウ */}
+        <div style={{
+          flex: 1, border: "3px solid #fff", borderLeft: "none",
+          padding: "8px 10px", background: "#000",
+        }}>
           {phase === "question" && q && q.options.map((opt, i) => {
             let color = "#fff";
             if (answered) {
               if (i === q.answer) color = "#0f0";
-              else if (i === selectedAnswer) color = "#f44";
-              else color = "#555";
+              else if (i === selectedAnswer && i !== q.answer) color = "#f44";
+              else color = "#444";
             }
             return (
               <div key={i} onClick={() => handleAnswer(i)} style={{
-                fontSize: 11, color, padding: "3px 0", cursor: answered ? "default" : "pointer",
-                display: "flex", alignItems: "flex-start", gap: 4, lineHeight: 1.5,
+                fontSize: 8, color, padding: "4px 0",
+                cursor: answered ? "default" : "pointer",
+                display: "flex", gap: 6, alignItems: "flex-start",
+                lineHeight: 2,
               }}>
-                <span style={{ flexShrink: 0 }}>
-                  {answered ? (i === q.answer ? "○" : i === selectedAnswer ? "×" : ["Ａ","Ｂ","Ｃ","Ｄ"][i]) : ["Ａ","Ｂ","Ｃ","Ｄ"][i]}
+                <span style={{ flexShrink: 0, color: answered && i === q.answer ? "#0f0" : answered && i === selectedAnswer ? "#f44" : "#fff" }}>
+                  {answered ? (i === q.answer ? "○" : i === selectedAnswer ? "×" : ["A","B","C","D"][i]) : ["A","B","C","D"][i]}
                 </span>
-                <span>{cleanChoice(opt)}</span>
+                <span style={{ wordBreak: "break-all" }}>{clean(opt)}</span>
               </div>
             );
           })}
 
           {phase === "command" && (
             <div>
-              <div style={{ fontSize: 10, color: "#888", marginBottom: 4 }}>さくせんをねる</div>
-              <div style={{ fontSize: 10, color: "#888" }}>－ {filteredQ.length - qIndex - 1}もんのこり</div>
+              <div style={{ fontSize: 7, color: "#444", lineHeight: 2.5 }}>
+                のこり {filteredQ.length - qIndex - 1} もん
+              </div>
+              <div style={{ fontSize: 7, color: "#444" }}>
+                No.{String(qIndex + 1).padStart(3, "0")}
+              </div>
             </div>
           )}
 
-          {(phase === "result" || phase === "animating") && !showExplanation && (
-            <div style={{ fontSize: 10, color: "#555" }}>・・・</div>
+          {(phase === "animating") && (
+            <div style={{ fontSize: 8, color: "#444" }}>・・・</div>
           )}
 
           {phase === "clear" && (
-            <div style={{ fontSize: 11, color: "#ff0", lineHeight: 1.8 }}>
-              🏆 クリア！<br />
-              ○{scores.correct} ✗{scores.wrong}<br />
-              {Math.round(scores.correct / (scores.correct + scores.wrong) * 100)}%せいかい
+            <div style={{ fontSize: 7, color: "#ffff00", lineHeight: 2.5 }}>
+              CLEAR!<br />
+              CORRECT<br />
+              {correct + 1}/{filteredQ.length}
             </div>
           )}
 
           {phase === "gameover" && (
-            <div style={{ fontSize: 11, color: "#f88", lineHeight: 1.8 }}>
-              GAME OVER<br />
-              ○{scores.correct} ✗{scores.wrong}
+            <div style={{ fontSize: 7, color: "#f88", lineHeight: 2.5 }}>
+              GAME<br />OVER<br />
+              {correct}/{qIndex + 1}
             </div>
           )}
         </div>
